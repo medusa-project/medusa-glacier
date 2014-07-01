@@ -5,8 +5,6 @@ require 'eventmachine'
 require 'logging'
 require 'bunny'
 require 'json'
-require_relative 'lib/amazon_config'
-require_relative 'lib/amqp_config'
 
 require_relative 'aws-java-sdk-1.8.0/lib/aws-java-sdk-1.8.0.jar'
 Dir[File.join('aws-java-sdk-1.8.0/third-party/**/*.jar')].each do |jar|
@@ -25,6 +23,8 @@ import com.amazonaws.services.glacier.model.ListMultipartUploadsRequest
 import com.amazonaws.services.glacier.model.ListMultipartUploadsResult
 import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
 
+require_relative 'lib/amazon_config'
+require_relative 'lib/amqp_config'
 
 #To get started, start up a server that just reads requests from the queue and logs them
 logger = Logging.logger['medusa_glacier']
