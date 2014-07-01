@@ -2,25 +2,25 @@ GEM
   remote: https://rubygems.org/
   specs:
     amq-protocol (1.9.2)
+    amqp (1.4.0)
+      amq-protocol (>= 1.9.2)
+      eventmachine
     bunny (1.3.1)
       amq-protocol (>= 1.9.2)
     cattr (0.1.2)
-    daemons (1.1.9)
     eventmachine (1.0.3-java)
     little-plugger (1.1.3)
     logging (1.8.2)
       little-plugger (>= 1.1.3)
       multi_json (>= 1.8.4)
-    mq (0.1.3)
     multi_json (1.10.1)
 
 PLATFORMS
   java
 
 DEPENDENCIES
+  amqp
   bunny
   cattr
-  daemons
   eventmachine
   logging
-  mq
