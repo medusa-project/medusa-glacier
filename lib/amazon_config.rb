@@ -4,14 +4,8 @@ require 'cattr'
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.glacier.AmazonGlacierClient
-import com.amazonaws.services.glacier.transfer.ArchiveTransferManager
-import com.amazonaws.services.glacier.transfer.UploadResult
 import com.amazonaws.services.sns.AmazonSNSClient
 import com.amazonaws.services.sqs.AmazonSQSClient
-import com.amazonaws.services.glacier.model.DeleteArchiveRequest
-import com.amazonaws.services.glacier.model.ListMultipartUploadsRequest
-import com.amazonaws.services.glacier.model.ListMultipartUploadsResult
-import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
 
 
 class AmazonConfig
