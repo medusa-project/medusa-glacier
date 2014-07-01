@@ -1,27 +1,6 @@
-#!/usr/bin/env ruby
-require 'java'
-require 'yaml'
-require_relative 'aws-java-sdk-1.8.0/lib/aws-java-sdk-1.8.0.jar'
-Dir[File.join('aws-java-sdk-1.8.0/third-party/**/*.jar')].each do |jar|
-  require_relative jar
-end
-
-import com.amazonaws.auth.AWSCredentials
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.services.glacier.AmazonGlacierClient
-import com.amazonaws.services.glacier.transfer.ArchiveTransferManager
-import com.amazonaws.services.glacier.transfer.UploadResult
-import com.amazonaws.services.sns.AmazonSNSClient
-import com.amazonaws.services.sqs.AmazonSQSClient
-import com.amazonaws.services.glacier.model.DeleteArchiveRequest
-import com.amazonaws.services.glacier.model.ListMultipartUploadsRequest
-import com.amazonaws.services.glacier.model.ListMultipartUploadsResult
-import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
-
-require_relative 'lib/amazon_config'
-
-class MedusaGlacier
-
+#This won't work as is, as I changed how the config works.
+#This is really just to preserve this code until I've incorporated what I need into the real project
+class OriginalTestCode
   def upload
     transfer_manager = ArchiveTransferManager.new(self.glacier_client, self.aws_credentials)
     result = transfer_manager.upload(self.vault_name, "Archive: #{Date.today}", java.io.File.new('sample.txt'))
@@ -53,5 +32,3 @@ class MedusaGlacier
   end
 
 end
-
-
