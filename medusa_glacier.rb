@@ -7,4 +7,6 @@ end
 
 require 'lib/medusa_glacier_server'
 
-MedusaGlacierServer.new.run
+#only run if given run as the first argument. This is useful for letting us load this file
+#in irb to work with things interactively when we need to
+MedusaGlacierServer.new.run if ARGV[0] == 'run'
