@@ -81,11 +81,13 @@ class MedusaGlacierServer
     end
   rescue JSON::ParserError
     return {status: 'failure', error_message: 'Invalid Request'}
-  rescue Exception
+  rescue Exception => e
+    logger.error "Unknown Error: #{e.to_s}"
     return {status: 'failure', error_message: 'Unknown failure'}
   end
 
   def handle_upload_directory_request(json_request)
+    self.logger.info "In handle upload"
     source_directory = json_request['parameters']['directory']
     unless File.directory?(source_directory)
       return {status: 'failure', error_message: 'Upload directory not found', action: json_request['action'], pass_through: json_request['pass_through']}
@@ -93,10 +95,16 @@ class MedusaGlacierServer
     tarball_directory = File.dirname(source_directory)
     tarball_name = File.basename(source_directory) + ".tar"
     Dir.chdir(tarball_directory) do
+      self.logger.info "Making tar"
       system('tar', '--create', '--file', tarball_name, File.basename(source_directory))
+      self.logger.info "Making transfer manager"
       transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
-      result = transfer_manager.upload(AmazonConfig.vault_name, json_request['parameters']['description'], java.io.File.new(tarball_name))
-      Fileutils.rm(tarball_name)
+      self.logger.info "Doing upload"
+      #It seems that when making the java file object we need to use the full path
+      result = transfer_manager.upload(AmazonConfig.vault_name, json_request['parameters']['description'],
+                                       java.io.File.new(File.join(tarball_directory, tarball_name)))
+      self.logger.info  "removing tarball"
+      FileUtils.rm(tarball_name)
       return {status: 'success', action: json_request['action'], pass_through: json_request['pass_through'],
               parameters: {archive_id: result.getArchiveId}}
     end
