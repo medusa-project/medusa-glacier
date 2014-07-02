@@ -97,16 +97,16 @@ class MedusaGlacierServer
     Dir.chdir(tarball_directory) do
       self.logger.info "Making tar"
       system('tar', '--create', '--file', tarball_name, File.basename(source_directory))
-      self.logger.info "Making transfer manager"
       transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
       self.logger.info "Doing upload"
       #It seems that when making the java file object we need to use the full path
       result = transfer_manager.upload(AmazonConfig.vault_name, json_request['parameters']['description'],
                                        java.io.File.new(File.join(tarball_directory, tarball_name)))
-      self.logger.info  "removing tarball"
+      self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
+      self.logger.info  "Removing tar"
       FileUtils.rm(tarball_name)
       return {status: 'success', action: json_request['action'], pass_through: json_request['pass_through'],
-              parameters: {archive_id: result.getArchiveId}}
+              parameters: {archive_id: result.getArchiveId()}}
     end
   end
 
