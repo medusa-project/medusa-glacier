@@ -81,10 +81,10 @@ class MedusaGlacierServer
                 pass_through: json_request['pass_through']}
     end
   rescue JSON::ParserError
-    return {status: 'failure', error_message: 'Invalid Request'}
+    return {status: 'failure', error_message: 'Invalid Request', pass_through: json_request['pass_through']}
   rescue Exception => e
     logger.error "Unknown Error: #{e.to_s}"
-    return {status: 'failure', error_message: 'Unknown failure'}
+    return {status: 'failure', error_message: 'Unknown failure', pass_through: json_request['pass_through']}
   end
 
   def handle_upload_directory_request(json_request)
