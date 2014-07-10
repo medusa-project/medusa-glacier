@@ -96,6 +96,7 @@ class MedusaGlacierServer
     tarball_name = File.basename(source_directory) + ".tar"
     Dir.chdir(tarball_directory) do
       self.logger.info "Making tar"
+      FileUtils.rm_rf(tarball_name)
       system('tar', '--create', '--file', tarball_name, File.basename(source_directory))
       transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
       self.logger.info "Doing upload"
