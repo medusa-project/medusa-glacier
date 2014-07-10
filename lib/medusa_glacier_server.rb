@@ -38,10 +38,10 @@ class MedusaGlacierServer
   def initialize_amqp
     amqp_connection = Bunny.new
     amqp_connection.start
-    channel = amqp_connection.create_channel
-    self.incoming_queue = channel.queue(AmqpConfig.incoming_queue, :durable => true)
+    self.channel = amqp_connection.create_channel
+    self.incoming_queue = self.channel.queue(AmqpConfig.incoming_queue, :durable => true)
     #This call is just to make sure that this queue exists
-    self.outgoing_queue = channel.queue(AmqpConfig.outgoing_queue, :durable => true)
+    self.outgoing_queue = self.channel.queue(AmqpConfig.outgoing_queue, :durable => true)
   end
 
   def run
