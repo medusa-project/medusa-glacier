@@ -32,8 +32,9 @@ upload_directory action:
 - Incoming parameters:
 -- directory - this is the absolute path to the directory to upload. The server will tar it (putting the tarball
 in the same directory that the upload directory is in), upload it, and then delete the tar.
--- description - the text that should go in the description field when uploading to Glacier. This must be less than
-1024 bytes.
+-- description - the text that should go in the description field when uploading to Glacier. The strictly encoded
+base64 version of this must be less than 1024 characters (the server will take what it receives and encode it
+as base64 using Ruby's standard library Base64.strict_encode64).
 
 - Outgoing parameters:
 -- archive_id - this is the archive id as returned by Amazon Glacier.

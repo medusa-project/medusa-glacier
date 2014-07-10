@@ -6,6 +6,7 @@ require 'bunny'
 require 'json'
 require 'uuid'
 require 'fileutils'
+require 'base64'
 
 require_relative 'amazon_config'
 require_relative 'amqp_config'
@@ -102,8 +103,11 @@ class MedusaGlacierServer
       self.logger.info "Doing upload"
       self.logger.info "Vault: #{AmazonConfig.vault_name}"
       self.logger.info "Tarball: #{File.join(tarball_directory, tarball_name)} Bytes: #{File.size(File.join(tarball_directory, tarball_name))}"
+      #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
+      #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
+      encoded_description = Base64.strict_encode64(json_request['parameters']['description'] || '')
       #It seems that when making the java file object we need to use the full path
-      result = transfer_manager.upload(AmazonConfig.vault_name, json_request['parameters']['description'],
+      result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description,
                                        java.io.File.new(File.join(tarball_directory, tarball_name)))
       self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
       self.logger.info  "Removing tar"
