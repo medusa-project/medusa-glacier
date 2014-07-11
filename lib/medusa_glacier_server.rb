@@ -20,11 +20,12 @@ import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
 
 class MedusaGlacierServer
 
-  attr_accessor :logger, :outgoing_queue, :incoming_queue, :channel
+  attr_accessor :logger, :outgoing_queue, :incoming_queue, :channel, :request_directory
 
   def initialize
     initialize_logger
     initialize_amqp
+    self.request_directory = 'run/active_requests'
   end
 
   def initialize_logger
@@ -50,23 +51,35 @@ class MedusaGlacierServer
       Kernel.at_exit do
         self.logger.info 'Stopping server'
       end
+      handle_saved_requests
       self.incoming_queue.subscribe do |delivery_info, metadata, request|
-        self.service_request(request)
+        self.service_incoming_request(request)
       end
     end
   end
 
-  def service_request(request)
+  def handle_saved_requests
+    Dir[File.join(self.request_directory, '*-*')].each do |file|
+      request = File.read(file)
+      uuid = File.basename(file)
+      service_request(request, uuid)
+    end
+  end
+
+  def service_incoming_request(request)
     uuid = UUID.generate
     self.logger.info "Started Request: #{uuid}\n#{request}"
     #Write request to system
-    request_directory = 'run/active_requests'
-    FileUtils.mkdir_p(request_directory)
-    File.open(File.join(request_directory, uuid), 'w') { |f| f.puts request }
+    FileUtils.mkdir_p(self.request_directory)
+    File.open(File.join(self.request_directory, uuid), 'w') { |f| f.puts request }
+    service_request(request, uuic)
+  end
+
+  def service_request(request, uuid)
     response_hash = self.dispatch_and_handle_request(request)
     #remove request from system
     FileUtils.rm(File.join(request_directory, uuid))
-    self.outgoing_queue.channel.default_exchange.publish(response_hash.to_json, routing_key: self.outgoing_queue.name, persistent: true)
+    self.outgoing_queue.channel.default_exchange.publish(response_hash.to_json, :routing_key => self.outgoing_queue.name, :persistent => true)
     self.logger.info "Finished Request: #{uuid}"
   end
 
@@ -77,21 +90,21 @@ class MedusaGlacierServer
       when 'upload_directory'
         handle_upload_directory_request(json_request)
       else
-        return {status: 'failure', error_message: 'Unrecognized Action', action: json_request['action'],
-                pass_through: json_request['pass_through']}
+        return {:status => 'failure', :error_message => 'Unrecognized Action', :action => json_request['action'],
+            :pass_through => json_request['pass_through']}
     end
   rescue JSON::ParserError
-    return {status: 'failure', error_message: 'Invalid Request', pass_through: json_request['pass_through']}
+    return {:status => 'failure', :error_message => 'Invalid Request', :pass_through => json_request['pass_through']}
   rescue Exception => e
     logger.error "Unknown Error: #{e.to_s}"
-    return {status: 'failure', error_message: 'Unknown failure', pass_through: json_request['pass_through']}
+    return {:status => 'failure', :error_message => 'Unknown failure', :pass_through => json_request['pass_through']}
   end
 
   def handle_upload_directory_request(json_request)
     self.logger.info "In handle upload"
     source_directory = json_request['parameters']['directory']
     unless File.directory?(source_directory)
-      return {status: 'failure', error_message: 'Upload directory not found', action: json_request['action'], pass_through: json_request['pass_through']}
+      return {:status => 'failure', :error_message => 'Upload directory not found', :action => json_request['action'], :pass_through => json_request['pass_through']}
     end
     tarball_directory = File.dirname(source_directory)
     tarball_name = File.basename(source_directory) + ".tar"
@@ -110,10 +123,10 @@ class MedusaGlacierServer
       result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description,
                                        java.io.File.new(File.join(tarball_directory, tarball_name)))
       self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
-      self.logger.info  "Removing tar"
+      self.logger.info "Removing tar"
       FileUtils.rm(tarball_name)
-      return {status: 'success', action: json_request['action'], pass_through: json_request['pass_through'],
-              parameters: {archive_id: result.getArchiveId()}}
+      return {:status => 'success', :action => json_request['action'], :pass_through => json_request['pass_through'],
+          :parameters => {:archive_id => result.getArchiveId()}}
     end
   end
 
