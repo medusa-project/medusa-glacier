@@ -62,6 +62,7 @@ class MedusaGlacierServer
     Dir[File.join(self.request_directory, '*-*')].each do |file|
       request = File.read(file)
       uuid = File.basename(file)
+      self.logger.info "Restarting Request: #{uuid}\n#{request}"
       service_request(request, uuid)
     end
   end
