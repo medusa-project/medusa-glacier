@@ -73,7 +73,7 @@ class MedusaGlacierServer
     #Write request to system
     FileUtils.mkdir_p(self.request_directory)
     File.open(File.join(self.request_directory, uuid), 'w') { |f| f.puts request }
-    service_request(request, uuic)
+    service_request(request, uuid)
   end
 
   def service_request(request, uuid)
