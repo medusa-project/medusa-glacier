@@ -64,12 +64,19 @@ class MedusaGlacierServer
     end
   end
 
+  def shutdown
+    self.logger.info "Halting server before processing request."
+    puts "Halting server before processing request."
+    exit 0
+  end
+
   def handle_saved_requests
     Dir[File.join(self.request_directory, '*-*')].each do |file|
       request = File.read(file)
       uuid = File.basename(file)
       self.logger.info "Restarting Request: #{uuid}\n#{request}"
       service_request(request, uuid)
+      self.shutdown if self.halt_before_processing
     end
   end
 
@@ -80,14 +87,10 @@ class MedusaGlacierServer
     FileUtils.mkdir_p(self.request_directory)
     File.open(File.join(self.request_directory, uuid), 'w') { |f| f.puts request }
     service_request(request, uuid)
+    self.shutdown if self.halt_before_processing
   end
 
   def service_request(request, uuid)
-    if self.halt_before_processing
-      self.logger.info "Halting server before processing request - current request will start on server restart"
-      puts "Halting server before processing request - current request will start on server restart"
-      exit 0
-    end
     response_hash = self.dispatch_and_handle_request(request)
     #remove request from system
     FileUtils.rm(File.join(request_directory, uuid))
@@ -118,7 +121,8 @@ class MedusaGlacierServer
     unless File.directory?(source_directory)
       return {:status => 'failure', :error_message => 'Upload directory not found', :action => json_request['action'], :pass_through => json_request['pass_through']}
     end
-    tarball_directory = File.dirname(source_directory)
+    tarball_directory = File.dirname(source_directory)s
+    
     tarball_name = File.basename(source_directory) + ".tar"
     Dir.chdir(tarball_directory) do
       self.logger.info "Making tar"

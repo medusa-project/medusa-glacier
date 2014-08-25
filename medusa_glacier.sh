@@ -35,7 +35,7 @@ case "$1" in
 	    echo "The server does not seem to be running; no pid file found."
 	fi
 	;;
-    toggle-halt-before-next-request)
+    toggle-halt)
 	if [ -f $PID_FILE ]; then
 	    PID=`cat $PID_FILE`
 	    kill -USR2 $PID
