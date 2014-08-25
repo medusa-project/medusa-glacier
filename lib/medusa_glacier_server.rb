@@ -121,8 +121,8 @@ class MedusaGlacierServer
     unless File.directory?(source_directory)
       return {:status => 'failure', :error_message => 'Upload directory not found', :action => json_request['action'], :pass_through => json_request['pass_through']}
     end
-    tarball_directory = File.dirname(source_directory)s
-    
+    tarball_directory = File.dirname(source_directory)
+
     tarball_name = File.basename(source_directory) + ".tar"
     Dir.chdir(tarball_directory) do
       self.logger.info "Making tar"
