@@ -24,13 +24,23 @@ case "$1" in
 	    PID=`cat $PID_FILE`
 	    COMMAND=`ps -p $PID -o comm=`
 	    #The jruby process shows up under ps with the command 'java'
-	    if [ $COMMAND = "java" ]; then
-		echo "Killing meudsa_glacier.rb pid: $PID"
+	    if [ "$COMMAND" = "java" ]; then
+		echo "Killing medusa_glacier.rb pid: $PID"
 		kill $PID
 	    else
 		echo "Process $PID is not medusa_glacier.rb; removing stale pid file"
 	    fi
 	    rm $PID_FILE
+	else
+	    echo "The server does not seem to be running; no pid file found."
+	fi
+	;;
+    toggle-halt-before-next-request)
+	if [ -f $PID_FILE ]; then
+	    PID=`cat $PID_FILE`
+	    kill -USR2 $PID
+	    sleep 1 
+	    tail -n 1 'log/medusa_glacier.log'
 	else
 	    echo "The server does not seem to be running; no pid file found."
 	fi

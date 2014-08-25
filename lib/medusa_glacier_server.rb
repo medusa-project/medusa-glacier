@@ -20,11 +20,12 @@ import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
 
 class MedusaGlacierServer
 
-  attr_accessor :logger, :outgoing_queue, :incoming_queue, :channel, :request_directory
+  attr_accessor :logger, :outgoing_queue, :incoming_queue, :channel, :request_directory, :halt_before_processing
 
   def initialize
     initialize_logger
     initialize_amqp
+    self.halt_before_processing = false
     self.request_directory = 'run/active_requests'
   end
 
@@ -50,6 +51,11 @@ class MedusaGlacierServer
     EventMachine.run do
       Kernel.at_exit do
         self.logger.info 'Stopping server'
+      end
+      Kernel.trap('USR2') do
+        self.halt_before_processing = !self.halt_before_processing
+        self.logger.info "Server will halt before processing next job: #{self.halt_before_processing}"
+        puts "Server will halt before processing next job: #{self.halt_before_processing}"
       end
       handle_saved_requests
       self.incoming_queue.subscribe do |delivery_info, metadata, request|
@@ -77,6 +83,11 @@ class MedusaGlacierServer
   end
 
   def service_request(request, uuid)
+    if self.halt_before_processing
+      self.logger.info "Halting server before processing request - current request will start on server restart"
+      puts "Halting server before processing request - current request will start on server restart"
+      exit 0
+    end
     response_hash = self.dispatch_and_handle_request(request)
     #remove request from system
     FileUtils.rm(File.join(request_directory, uuid))
