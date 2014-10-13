@@ -48,18 +48,21 @@ class MedusaGlacierServer
   end
 
   def run
-    EventMachine.run do
-      Kernel.at_exit do
-        self.logger.info 'Stopping server'
-      end
-      Kernel.trap('USR2') do
-        self.halt_before_processing = !self.halt_before_processing
-        self.logger.info "Server will halt before processing next job: #{self.halt_before_processing}"
-        puts "Server will halt before processing next job: #{self.halt_before_processing}"
-      end
-      handle_saved_requests
-      self.incoming_queue.subscribe do |delivery_info, metadata, request|
+    Kernel.at_exit do
+      self.logger.info 'Stopping server'
+    end
+    Kernel.trap('USR2') do
+      self.halt_before_processing = !self.halt_before_processing
+      self.logger.info "Server will halt before processing next job: #{self.halt_before_processing}"
+      puts "Server will halt before processing next job: #{self.halt_before_processing}"
+    end
+    handle_saved_requests
+    while true do
+      delivery_info, metadata, request = self.incoming_queue.pop
+      if request
         self.service_incoming_request(request)
+      else
+        sleep 60
       end
     end
   end
