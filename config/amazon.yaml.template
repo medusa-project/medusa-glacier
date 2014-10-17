@@ -8,3 +8,5 @@ vault_name: MedusaVault
 #amazon sqs and sns endpoints
 sqs_endpoint: sqs.us-west-2.amazonaws.com
 sns_endpoint: sns.us-west-2.amazonaws.com
+#location of bit level storage
+cfs_root: /mnt/cnfs/root

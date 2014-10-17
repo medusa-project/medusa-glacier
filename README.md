@@ -1,7 +1,13 @@
 This is a simple service. It runs on the same machine (preferably as the same user) as another that wants to
 ingest things into Amazon Glacier. The two communicate via AMQP. Basically the client will send a JSON request
 telling what to ingest. This service then takes any necessary initial action, ingests the content, and
-returns the archive id to the client.
+returns the archive ids to the client. 
+
+In contrast to earlier versions of this service the client now is not responsible for figuring out what files to
+send and splitting up into chunks if the directory is too large. Instead the client will pass a date to use
+to filter files for upload and this server will use it to filter. Also this server will (eventually) be responsible
+for splitting up the content if that is necessary, although for now we assume that all of our bags will fall under
+Amazon's 40TB limit.
 
 For now the service is about as simple as it can be to work for our Medusa application.
 
@@ -38,23 +44,27 @@ A response is a JSON object with fields:
 - error_message: If the status is failure then this may be returned to give information.
 - action: The originally requested action
 - parameters: A JSON object with parameters appropriate to the request. For example, on a request for uploading
- a directory we would return the archive id.
+ a directory we would return the archive ids.
 
-Note that for certain errors (e.g. if the request isn't parsable as JSON) it may not be possible to return some
+Note that for certain errors (e.g. if the request isn't parseable as JSON) it may not be possible to return some
 of these things.
 
 upload_directory action:
 
 - Incoming parameters:
 
-  - directory - this is the absolute path to the directory to upload. The server will tar it (putting the tarball
-in the same directory that the upload directory is in), upload it, and then delete the tar.
+  - directory - this is the path relative to the cfs root to be uploaded. The server will tar it, upload it, 
+and then delete the tar.
   - description - the text that should go in the description field when uploading to Glacier. The strictly encoded
 base64 version of this must be less than 1024 characters (the server will take what it receives and encode it
 as base64 using Ruby's standard library Base64.strict_encode64).
+  - date (optional) - if this is present then only files with mtime equal to or later than the given date will be
+uploaded. Otherwise all files will be.
 
 And: 
 
 - Outgoing parameters:
 
-  - archive_id - this is the archive id as returned by Amazon Glacier.
+  - archive_ids - these are the archive ids as returned by Amazon Glacier, in a JSON array. Note that at present
+we only handle directories that are small enough to fit into a single amazon upload, about 40TB (a little less in
+practice because of the tar overhead), so this will always have one element only.
