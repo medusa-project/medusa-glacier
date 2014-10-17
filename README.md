@@ -58,8 +58,8 @@ and then delete the tar.
   - description - the text that should go in the description field when uploading to Glacier. The strictly encoded
 base64 version of this must be less than 1024 characters (the server will take what it receives and encode it
 as base64 using Ruby's standard library Base64.strict_encode64).
-  - date (optional) - if this is present then only files with mtime equal to or later than the given date will be
-uploaded. Otherwise all files will be.
+  - date (optional) - if this is present and represents a date then only files with mtime equal to or later than the
+   given date will be uploaded. Otherwise (if absent or null) all files will be.
 
 And: 
 

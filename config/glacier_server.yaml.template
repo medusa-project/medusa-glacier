@@ -1,0 +1,2 @@
+cfs_root: /mnt/cnfs/root
+bag_root: /mnt/cnfs/amazon_backup

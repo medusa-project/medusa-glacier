@@ -1,12 +1,12 @@
 require 'java'
 require 'yaml'
-require 'eventmachine'
 require 'logging'
 require 'bunny'
 require 'json'
 require 'uuid'
 require 'fileutils'
 require 'base64'
+require 'date'
 
 require_relative 'amazon_config'
 require_relative 'amqp_config'
@@ -20,13 +20,27 @@ import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
 
 class MedusaGlacierServer
 
-  attr_accessor :logger, :outgoing_queue, :incoming_queue, :channel, :request_directory, :halt_before_processing
+  attr_accessor :logger, :outgoing_queue, :incoming_queue, :channel, :request_directory, :halt_before_processing,
+                :config
 
   def initialize
     initialize_logger
     initialize_amqp
+    initialize_config
     self.halt_before_processing = false
     self.request_directory = 'run/active_requests'
+  end
+
+  def initialize_config
+    self.config = YAML.load_file('config/glacier_server.yaml')
+  end
+
+  def cfs_root
+    self.config['cfs_root']
+  end
+
+  def bag_root
+    self.config['bag_root']
   end
 
   def initialize_logger
@@ -118,23 +132,38 @@ class MedusaGlacierServer
     return {:status => 'failure', :error_message => 'Unknown failure', :pass_through => json_request['pass_through']}
   end
 
+  #maybe dispatch some of the following depending on whether this is a full or incremental backup
+  #clean up any previous attempt to service request
+  #construct bag
+  #tar bag
+  #upload tar
+  #remove tar and bag
+  #Additionally this should be refactored, it's messy
   def handle_upload_directory_request(json_request)
     self.logger.info "In handle upload"
-    source_directory = json_request['parameters']['directory']
+    relative_directory = json_request['parameters']['directory']
+    source_directory = File.join(self.cfs_root, relative_directory)
     unless File.directory?(source_directory)
       return {:status => 'failure', :error_message => 'Upload directory not found', :action => json_request['action'], :pass_through => json_request['pass_through']}
     end
-    tarball_directory = File.dirname(source_directory)
-
-    tarball_name = File.basename(source_directory) + ".tar"
-    Dir.chdir(tarball_directory) do
-      self.logger.info "Making tar"
-      FileUtils.rm_rf(tarball_name)
-      system('tar', '--create', '--file', tarball_name, File.basename(source_directory))
+    ingest_id = relative_directory.gsub('/', '-')
+    bag_directory = File.join(self.bag_root, ingest_id)
+    tar_file = File.join(self.bag_root, "#{ingest_id}.tar")
+    FileUtils.rm(tar_file) if File.exists?(tar_file)
+    FileUtils.rm_rf(bag_directory) if File.exists?(bag_directory)
+    date = json_request['parameters']['date']
+    if date
+      date = Date.parse(date) if date
+      make_incremental_tar(source_directory, bag_directory, tar_file, date)
+    else
+      make_full_tar(source_directory, bag_directory, tar_file)
+    end
+    Dir.chdir(bag_directory) do
+      #system('tar', '--create', '--file', tarball_name, File.basename(source_directory))
       transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
       self.logger.info "Doing upload"
       self.logger.info "Vault: #{AmazonConfig.vault_name}"
-      self.logger.info "Tarball: #{File.join(tarball_directory, tarball_name)} Bytes: #{File.size(File.join(tarball_directory, tarball_name))}"
+      self.logger.info "Tarball: #{tar_file} Bytes: #{File.size(tar_file)}"
       #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
       #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
       encoded_description = Base64.strict_encode64(json_request['parameters']['description'] || '')
@@ -143,9 +172,11 @@ class MedusaGlacierServer
                                        java.io.File.new(File.join(tarball_directory, tarball_name)))
       self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
       self.logger.info "Removing tar"
-      FileUtils.rm(tarball_name)
+      FileUtils.rm(tarball_name) if File.exists?(tar_file)
+      self.logger.info "Removing bag directory"
+      FileUtils.rm_rf(bag_directory) if File.exists?(bag_directory)
       return {:status => 'success', :action => json_request['action'], :pass_through => json_request['pass_through'],
-          :parameters => {:archive_id => result.getArchiveId()}}
+          :parameters => {:archive_ids => [result.getArchiveId()]}}
     end
   end
 
