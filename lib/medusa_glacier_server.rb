@@ -180,6 +180,14 @@ class MedusaGlacierServer
     end
   end
 
+  def make_incremental_tar(source_directory, bag_directory, tar_file, date)
+
+  end
+
+  def make_full_tar(source_directory, bag_directory, tar_file)
+
+  end
+
   #This isn't directly in the current workflow, It's a convenience for testing, etc.
   def delete_archive(archive_id)
     delete_request = DeleteArchiveRequest.new
