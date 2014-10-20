@@ -133,14 +133,6 @@ class MedusaGlacierServer
     return {:status => 'failure', :error_message => 'Unknown failure', :pass_through => json_request['pass_through']}
   end
 
-  #maybe dispatch some of the following depending on whether this is a full or incremental backup
-  #clean up any previous attempt to service request
-  #construct bag
-  #tar bag
-  #upload tar
-  #save bag manifest
-  #remove tar and bag
-  #Additionally this should be refactored, it's messy
   def handle_upload_directory_request(json_request)
     self.logger.info "In handle upload"
     relative_directory = json_request['parameters']['directory']
