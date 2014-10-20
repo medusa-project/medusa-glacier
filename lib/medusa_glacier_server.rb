@@ -5,7 +5,6 @@ require 'bunny'
 require 'json'
 require 'uuid'
 require 'fileutils'
-require 'pathname'
 require 'base64'
 require 'date'
 
