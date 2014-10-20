@@ -150,26 +150,29 @@ class MedusaGlacierServer
       return {:status => 'failure', :error_message => 'Upload directory not found', :action => json_request['action'], :pass_through => json_request['pass_through']}
     end
     ingest_id = relative_directory.gsub('/', '-')
-    tar_file = File.join(self.bag_root, "#{ingest_id}.tar")
     packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
-                            tar_file: tar_file, date: json_request['parameters']['date'])
+                            tar_file: File.join(self.bag_root, "#{ingest_id}.tar"), date: json_request['parameters']['date'])
     packager.make_tar
-    transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
-    self.logger.info "Doing upload"
-    self.logger.info "Vault: #{AmazonConfig.vault_name}"
-    self.logger.info "Tarball: #{tar_file} Bytes: #{File.size(tar_file)}"
     #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
     #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
     encoded_description = Base64.strict_encode64(json_request['parameters']['description'] || '')
-    #It seems that when making the java file object we need to use the full path
-    result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description, java.io.File.new(tar_file))
-    self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
+    archive_id = self.upload_tar(packager, encoded_description)
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
     return {:status => 'success', :action => json_request['action'], :pass_through => json_request['pass_through'],
-            :parameters => {:archive_ids => [result.getArchiveId()]}}
+            :parameters => {:archive_ids => [archive_id]}}
   end
 
+  def upload_tar(packager, description)
+    transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
+    self.logger.info "Doing upload"
+    self.logger.info "Vault: #{AmazonConfig.vault_name}"
+    self.logger.info "Tarball: #{packager.tar_file} Bytes: #{packager.tar_file.size}"
+    #It seems that when making the java file object we need to use the full path
+    result = transfer_manager.upload(AmazonConfig.vault_name, description, java.io.File.new(packager.tar_file.to_s))
+    self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
+    return result.getArchiveId()
+  end
 
   #This isn't directly in the current workflow, It's a convenience for testing, etc.
   def delete_archive(archive_id)
