@@ -157,7 +157,6 @@ class MedusaGlacierServer
     #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
     encoded_description = Base64.strict_encode64(json_request['parameters']['description'] || '')
     archive_id = self.upload_tar(packager, encoded_description)
-    #TODO - copy manifest
     FileUtils.mkdir_p(File.join(self.bag_root, 'manifests'))
     FileUtils.copy(File.join(packager.bag_directory, 'manifest-md5.txt'),
                    File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt"))
