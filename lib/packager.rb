@@ -4,10 +4,11 @@
 require 'date'
 require 'pathname'
 require 'bagit'
+require 'os'
 
 class Packager < Object
 
-  attr_accessor :source_directory, :bag_directory, :date, :tar_file
+  attr_accessor :source_directory, :bag_directory, :date, :time, :tar_file
 
   def initialize(args = {})
     self.source_directory = Pathname.new(args[:source_directory])
@@ -24,6 +25,7 @@ class Packager < Object
     else
       self.date = nil
     end
+    self.time = self.date.to_time if self.date
   end
 
   def make_tar
@@ -54,8 +56,8 @@ class Packager < Object
   def link_modified_files(source_dir, target_dir)
     source_dir.each_child(true) do |child|
       child_target = target_dir.join(child.basename)
-      if child.file? and (child.mtime >= self.date)
-        child_target.symlink(child)
+      if child.file? and (child.mtime >= self.time)
+        child_target.make_symlink(child)
       elsif child.directory?
         child_target.mkpath
         link_modified_files(child, child_target)
@@ -75,6 +77,9 @@ class Packager < Object
     bag = BagIt::Bag.new(bag_directory)
     yield
     bag.manifest!
+    Dir.chdir(bag_directory.dirname) do
+      system(tar_command, '--create', '--dereference', '--file', tar_file.to_s, bag_directory.basename.to_s)
+    end
   end
 
   def bag_data_directory
@@ -82,14 +87,13 @@ class Packager < Object
   end
 
   def tar_command
-    case RUBY_PLATFORM
-      when /linux/
-        'tar'
-      when /darwin/
-        #for darwin use homebrew (or other) GNU tar instead of BSD tar
-        'gtar'
-      else
-        raise RuntimeError, 'Unrecognized platform'
+    if OS.linux?
+      'tar'
+    elsif OS.mac?
+      #for darwin use homebrew (or other) GNU tar instead of BSD tar
+      'gtar'
+    else
+      raise RuntimeError, 'Unrecognized platform'
     end
   end
 
