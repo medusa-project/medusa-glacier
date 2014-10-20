@@ -5,11 +5,13 @@ require 'bunny'
 require 'json'
 require 'uuid'
 require 'fileutils'
+require 'pathname'
 require 'base64'
 require 'date'
 
 require_relative 'amazon_config'
 require_relative 'amqp_config'
+require_relative 'packager'
 
 import com.amazonaws.services.glacier.transfer.ArchiveTransferManager
 import com.amazonaws.services.glacier.transfer.UploadResult
@@ -123,7 +125,7 @@ class MedusaGlacierServer
         handle_upload_directory_request(json_request)
       else
         return {:status => 'failure', :error_message => 'Unrecognized Action', :action => json_request['action'],
-            :pass_through => json_request['pass_through']}
+                :pass_through => json_request['pass_through']}
     end
   rescue JSON::ParserError
     return {:status => 'failure', :error_message => 'Invalid Request', :pass_through => json_request['pass_through']}
@@ -137,6 +139,7 @@ class MedusaGlacierServer
   #construct bag
   #tar bag
   #upload tar
+  #save bag manifest
   #remove tar and bag
   #Additionally this should be refactored, it's messy
   def handle_upload_directory_request(json_request)
@@ -149,44 +152,27 @@ class MedusaGlacierServer
     ingest_id = relative_directory.gsub('/', '-')
     bag_directory = File.join(self.bag_root, ingest_id)
     tar_file = File.join(self.bag_root, "#{ingest_id}.tar")
-    FileUtils.rm(tar_file) if File.exists?(tar_file)
-    FileUtils.rm_rf(bag_directory) if File.exists?(bag_directory)
     date = json_request['parameters']['date']
-    if date
-      date = Date.parse(date) if date
-      make_incremental_tar(source_directory, bag_directory, tar_file, date)
-    else
-      make_full_tar(source_directory, bag_directory, tar_file)
-    end
-    Dir.chdir(bag_directory) do
-      #system('tar', '--create', '--file', tarball_name, File.basename(source_directory))
-      transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
-      self.logger.info "Doing upload"
-      self.logger.info "Vault: #{AmazonConfig.vault_name}"
-      self.logger.info "Tarball: #{tar_file} Bytes: #{File.size(tar_file)}"
-      #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
-      #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
-      encoded_description = Base64.strict_encode64(json_request['parameters']['description'] || '')
-      #It seems that when making the java file object we need to use the full path
-      result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description,
-                                       java.io.File.new(File.join(tarball_directory, tarball_name)))
-      self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
-      self.logger.info "Removing tar"
-      FileUtils.rm(tarball_name) if File.exists?(tar_file)
-      self.logger.info "Removing bag directory"
-      FileUtils.rm_rf(bag_directory) if File.exists?(bag_directory)
-      return {:status => 'success', :action => json_request['action'], :pass_through => json_request['pass_through'],
-          :parameters => {:archive_ids => [result.getArchiveId()]}}
-    end
+    packager = Packager.new(source_directory: source_directory, bag_directory: bag_directory,
+                            tar_file: tar_file, date: date)
+    packager.make_tar
+    transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
+    self.logger.info "Doing upload"
+    self.logger.info "Vault: #{AmazonConfig.vault_name}"
+    self.logger.info "Tarball: #{tar_file} Bytes: #{File.size(tar_file)}"
+    #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
+    #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
+    encoded_description = Base64.strict_encode64(json_request['parameters']['description'] || '')
+    #It seems that when making the java file object we need to use the full path
+    result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description,
+                                     java.io.File.new(tar_file))
+    self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
+    self.logger.info "Removing tar and bag directory"
+    packager.remove_bag_and_tar
+    return {:status => 'success', :action => json_request['action'], :pass_through => json_request['pass_through'],
+            :parameters => {:archive_ids => [result.getArchiveId()]}}
   end
 
-  def make_incremental_tar(source_directory, bag_directory, tar_file, date)
-
-  end
-
-  def make_full_tar(source_directory, bag_directory, tar_file)
-
-  end
 
   #This isn't directly in the current workflow, It's a convenience for testing, etc.
   def delete_archive(archive_id)
