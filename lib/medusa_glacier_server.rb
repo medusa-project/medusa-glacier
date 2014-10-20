@@ -150,11 +150,9 @@ class MedusaGlacierServer
       return {:status => 'failure', :error_message => 'Upload directory not found', :action => json_request['action'], :pass_through => json_request['pass_through']}
     end
     ingest_id = relative_directory.gsub('/', '-')
-    bag_directory = File.join(self.bag_root, ingest_id)
     tar_file = File.join(self.bag_root, "#{ingest_id}.tar")
-    date = json_request['parameters']['date']
-    packager = Packager.new(source_directory: source_directory, bag_directory: bag_directory,
-                            tar_file: tar_file, date: date)
+    packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
+                            tar_file: tar_file, date: json_request['parameters']['date'])
     packager.make_tar
     transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
     self.logger.info "Doing upload"
@@ -164,8 +162,7 @@ class MedusaGlacierServer
     #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
     encoded_description = Base64.strict_encode64(json_request['parameters']['description'] || '')
     #It seems that when making the java file object we need to use the full path
-    result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description,
-                                     java.io.File.new(tar_file))
+    result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description, java.io.File.new(tar_file))
     self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
