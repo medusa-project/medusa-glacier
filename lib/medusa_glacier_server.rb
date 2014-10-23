@@ -19,7 +19,7 @@ import com.amazonaws.services.glacier.model.ListMultipartUploadsRequest
 import com.amazonaws.services.glacier.model.ListMultipartUploadsResult
 import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
 
-class MedusaGlacierServer
+class MedusaGlacierServer < SimpleAmqpServer
 
   attr_accessor :logger, :outgoing_queue, :incoming_queue, :channel, :request_directory, :halt_before_processing,
                 :config

@@ -1,0 +1,3 @@
+class SimpleAmqpServer < Object
+
+end
