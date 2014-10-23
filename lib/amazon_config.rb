@@ -1,12 +1,12 @@
 require 'java'
 require 'cattr'
+require_relative 'amazon_jar_requirer'
 
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.glacier.AmazonGlacierClient
 import com.amazonaws.services.sns.AmazonSNSClient
 import com.amazonaws.services.sqs.AmazonSQSClient
-
 
 class AmazonConfig
 

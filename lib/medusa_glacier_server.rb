@@ -7,13 +7,8 @@ require 'fileutils'
 require 'base64'
 require 'date'
 
-require_relative '../aws-java-sdk-1.8.0/lib/aws-java-sdk-1.8.0.jar'
-Dir[File.join('../aws-java-sdk-1.8.0/third-party/**/*.jar')].each do |jar|
-  require_relative jar
-end
-
+require_relative 'amazon_jar_requirer'
 require_relative 'amazon_config'
-require_relative 'amqp_config'
 require_relative 'packager'
 require_relative 'simple_amqp_server'
 
@@ -43,8 +38,8 @@ class MedusaGlacierServer < SimpleAmqpServer
     relative_directory = interaction.request_parameter('directory')
     source_directory = File.join(self.cfs_root, relative_directory)
     unless File.directory?(source_directory)
-      return {:status => 'failure', :error_message => 'Upload directory not found', :action => interaction.action,
-              :pass_through => interaction.request_pass_through}
+      interaction.fail_generic('Upload directory not found')
+      return
     end
     ingest_id = relative_directory.gsub('/', '-')
     packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
@@ -54,9 +49,7 @@ class MedusaGlacierServer < SimpleAmqpServer
     #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
     encoded_description = Base64.strict_encode64(interaction.request_parameter('description') || '')
     archive_id = self.upload_tar(packager, encoded_description)
-    FileUtils.mkdir_p(File.join(self.bag_root, 'manifests'))
-    FileUtils.copy(File.join(packager.bag_directory, 'manifest-md5.txt'),
-                   File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt"))
+    self.save_manifest(packager.bag_directory, ingest_id)
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
     interaction.succeed(action, archive_ids: [archive_id])
@@ -71,6 +64,12 @@ class MedusaGlacierServer < SimpleAmqpServer
     result = transfer_manager.upload(AmazonConfig.vault_name, description, java.io.File.new(packager.tar_file.to_s))
     self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
     return result.getArchiveId()
+  end
+
+  def save_manifest(bag_directory, ingest_id)
+    FileUtils.mkdir_p(File.join(self.bag_root, 'manifests'))
+    FileUtils.copy(File.join(bag_directory, 'manifest-md5.txt'),
+                   File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt"))
   end
 
   #This isn't directly in the current workflow, It's a convenience for testing, etc.

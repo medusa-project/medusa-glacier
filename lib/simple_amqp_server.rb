@@ -62,8 +62,7 @@ class SimpleAmqpServer < Object
     end
     Kernel.trap('USR2') do
       self.halt_before_processing = !self.halt_before_processing
-      self.logger.info "Server will halt before processing next job: #{self.halt_before_processing}"
-      puts "Server will halt before processing next job: #{self.halt_before_processing}"
+      logger_tee "Server will halt before processing next job: #{self.halt_before_processing}"
     end
     service_saved_requests
     while true do
@@ -77,44 +76,53 @@ class SimpleAmqpServer < Object
   end
 
   def shutdown
-    self.logger.info "Halting server before processing request."
-    puts "Halting server before processing request."
+    logger_tee "Halting server before processing request."
     exit 0
+  end
+
+  def logger_tee(message)
+    logger.info message
+    puts message
   end
 
   def service_saved_requests
     Dir[File.join(self.request_directory, '*-*')].each do |file|
-      request = File.read(file)
-      uuid = File.basename(file)
-      interaction = SimpleAmqpInteraction.new(request, uuid)
-      self.logger.info "Restarting Request: #{uuid}\n#{request}"
+      interaction = SimpleAmqpInteraction.new(File.read(file), File.basename(file))
+      self.logger.info "Restarting Request: #{interaction.uuid}\n#{interaction.raw_request}"
       service_request(interaction)
-      self.shutdown if self.halt_before_processing
+      shutdown if halt_before_processing
     end
   end
 
   def service_incoming_request(request)
     interaction = SimpleAmqpInteraction.new(request)
-    self.logger.info "Started Request: #{interaction.uuid}\n#{request}"
-    #Write request to system
-    FileUtils.mkdir_p(self.request_directory)
-    File.open(File.join(self.request_directory, uuid), 'w') { |f| f.puts request }
+    logger.info "Started Request: #{interaction.uuid}\n#{request}"
+    persist_request(interaction)
     service_request(interaction)
-    self.shutdown if self.halt_before_processing
+    shutdown if halt_before_processing
+  end
+
+  def persist_request(interaction)
+    FileUtils.mkdir_p(request_directory)
+    File.open(File.join(request_directory, interaction.uuid), 'w') { |f| f.puts interaction.raw_request }
+  end
+
+  def unpersist_request(interaction)
+    file = File.join(request_directory, interaction.uuid)
+    FileUtils.rm(file) if File.exists?(file)
   end
 
   def service_request(interaction)
-    self.dispatch_and_handle_request(interaction) unless interaction.failed_request_parse?
-    #remove request from system
-    FileUtils.rm(File.join(request_directory, interaction.uuid)) if File.exists?(File.join(request_directory, interaction.uuid))
-    self.outgoing_queue.channel.default_exchange.publish(interaction.response.to_json, :routing_key => self.outgoing_queue.name, :persistent => true)
-    self.logger.info "Finished Request: #{uuid}"
+    dispatch_and_handle_request(interaction) unless interaction.failed_request_parse?
+    unpersist_request(interaction)
+    outgoing_queue.channel.default_exchange.publish(interaction.response.to_json, :routing_key => outgoing_queue.name, :persistent => true)
+    logger.info "Finished Request: #{interaction.uuid}"
   end
 
   def dispatch_and_handle_request(interaction)
     handler_name = "handle_#{interaction.action}_request"
-    if self.respond_to?(handler_name)
-      self.send(handler_name, interaction)
+    if respond_to?(handler_name)
+      send(handler_name, interaction)
     else
       interaction.fail_unrecognized_action
     end

@@ -62,6 +62,12 @@ class SimpleAmqpResponse < Object
     self.error_message = UNKNOWN_FAILURE_MESSAGE
   end
 
+  def fail_generic(action, error_message)
+    be_failure
+    self.error_message = error_message
+    self.action = action
+  end
+
   def succeed(action, parameter_hash = {})
     be_success
     self.action = action

@@ -47,6 +47,10 @@ class SimpleAmqpInteraction < Object
     self.response.fail_unknown
   end
 
+  def fail_generic(error_message)
+    self.response.fail_generic(self.action, error_message)
+  end
+
   def invalid_request?
     self.response.invalid_request?
   end
