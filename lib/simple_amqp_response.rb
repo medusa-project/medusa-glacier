@@ -1,5 +1,11 @@
 class SimpleAmqpResponse < Object
 
+  UNRECOGNIZED_ACTION_MESSAGE = 'Unrecognized Action'
+  INVALID_REQUEST_MESSAGE = 'Invalid Request'
+  UNKNOWN_FAILURE_MESSAGE = 'Unknown failure'
+  SUCCESS_MESSAGE = 'success'
+  FAILURE_MESSAGE = 'failure'
+
   attr_accessor :response_hash
 
   def initialize
@@ -19,16 +25,20 @@ class SimpleAmqpResponse < Object
     response_hash[:action] = action
   end
 
+  def error_message
+    response_hash[:message]
+  end
+  
   def error_message=(message)
     response_hash[:message] = message
   end
 
   def be_failure
-    response_hash[:status] = 'failure'
+    response_hash[:status] = FAILURE_MESSAGE
   end
 
   def be_success
-    response_hash[:status] = 'success'
+    response_hash[:status] = SUCCESS_MESSAGE
   end
 
   def set_parameter(key, value)
@@ -38,18 +48,18 @@ class SimpleAmqpResponse < Object
   def fail_unrecognized_action(action)
     be_failure
     self.action = action
-    self.error_message = 'Unrecognized Action'
+    self.error_message = UNRECOGNIZED_ACTION_MESSAGE
   end
 
   def fail_request_parse_error(raw_request)
     be_failure
-    self.error_message = 'Invalid Request'
+    self.error_message = INVALID_REQUEST_MESSAGE
     self.set_parameter(:raw_request, raw_request)
   end
 
   def fail_unknown
     be_failure
-    self.error_message = 'Unknown failure'
+    self.error_message = UNKNOWN_FAILURE_MESSAGE
   end
 
   def succeed(action, parameter_hash = {})
@@ -58,4 +68,8 @@ class SimpleAmqpResponse < Object
     self.response_hash['parameters'] = parameter_hash
   end
 
+  def invalid_request?
+    self.error_message == INVALID_REQUEST_MESSAGE
+  end
+  
 end

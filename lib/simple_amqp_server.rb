@@ -104,7 +104,7 @@ class SimpleAmqpServer < Object
   end
 
   def service_request(interaction)
-    self.dispatch_and_handle_request(interaction)
+    self.dispatch_and_handle_request(interaction) unless interaction.failed_request_parse?
     #remove request from system
     FileUtils.rm(File.join(request_directory, interaction.uuid)) if File.exists?(File.join(request_directory, interaction.uuid))
     self.outgoing_queue.channel.default_exchange.publish(interaction.response.to_json, :routing_key => self.outgoing_queue.name, :persistent => true)
@@ -118,9 +118,6 @@ class SimpleAmqpServer < Object
     else
       interaction.fail_unrecognized_action
     end
-  rescue JSON::ParserError
-    logger.error "Bad Request: #{interaction.raw_request}"
-    interaction.fail_request_parse_error(interaction.raw_request)
   rescue Exception => e
     logger.error "Unknown Error: #{e.to_s}"
     interaction.fail_unknown

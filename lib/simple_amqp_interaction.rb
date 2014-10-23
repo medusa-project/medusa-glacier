@@ -1,6 +1,7 @@
 require_relative 'simple_amqp_request'
 require_relative 'simple_amqp_response'
 require 'uuid'
+require 'json'
 
 class SimpleAmqpInteraction < Object
 
@@ -9,9 +10,13 @@ class SimpleAmqpInteraction < Object
   def initialize(json_request, uuid = nil)
     self.uuid = uuid || UUID.generate
     self.response = SimpleAmqpResponse.new
-    #TODO - handle JSON parse failure here
-    self.request = SimpleAmqpRequest.new(json_request)
-    self.response.pass_through = self.request_pass_through
+    begin
+      self.request = SimpleAmqpRequest.new(json_request)
+      self.response.pass_through = self.request_pass_through
+    rescue JSON::ParserError
+      logger.error "Bad Request: #{interaction.raw_request}"
+      self.fail_request_parse_error(self.raw_request)
+    end
   end
 
   def action
@@ -40,6 +45,10 @@ class SimpleAmqpInteraction < Object
 
   def fail_unknown
     self.response.fail_unknown
+  end
+
+  def invalid_request?
+    self.response.invalid_request?
   end
 
   def succeed(action, parameter_hash)
