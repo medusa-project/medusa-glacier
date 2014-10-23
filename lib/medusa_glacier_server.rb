@@ -1,6 +1,5 @@
 require 'java'
 require 'yaml'
-require 'logging'
 require 'bunny'
 require 'json'
 require 'uuid'
@@ -8,9 +7,15 @@ require 'fileutils'
 require 'base64'
 require 'date'
 
+require_relative '../aws-java-sdk-1.8.0/lib/aws-java-sdk-1.8.0.jar'
+Dir[File.join('../aws-java-sdk-1.8.0/third-party/**/*.jar')].each do |jar|
+  require_relative jar
+end
+
 require_relative 'amazon_config'
 require_relative 'amqp_config'
 require_relative 'packager'
+require_relative 'simple_amqp_server'
 
 import com.amazonaws.services.glacier.transfer.ArchiveTransferManager
 import com.amazonaws.services.glacier.transfer.UploadResult
@@ -21,140 +26,40 @@ import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
 
 class MedusaGlacierServer < SimpleAmqpServer
 
-  attr_accessor :logger, :outgoing_queue, :incoming_queue, :channel, :request_directory, :halt_before_processing,
-                :config
-
-  def initialize
-    initialize_logger
-    initialize_amqp
-    initialize_config
-    self.halt_before_processing = false
-    self.request_directory = 'run/active_requests'
-  end
-
-  def initialize_config
-    self.config = YAML.load_file('config/glacier_server.yaml')
+  def initialize(args = {})
+    super(args)
   end
 
   def cfs_root
-    self.config['cfs_root']
+    self.config.cfs(:cfs_root)
   end
 
   def bag_root
-    self.config['bag_root']
+    self.config.cfs(:bag_root)
   end
 
-  def initialize_logger
-#To get started, start up a server that just reads requests from the queue and logs them
-    self.logger = Logging.logger['medusa_glacier']
-    self.logger.add_appenders(Logging.appenders.file('log/medusa_glacier.log', :layout => Logging.layouts.pattern(:pattern => '[%d] %-5l: %m\n')))
-    self.logger.level = :info
-    self.logger.info 'Starting server'
-    ['log', 'run'].each { |directory| FileUtils.mkdir_p(directory) }
-  end
-
-  def initialize_amqp
-    amqp_connection = Bunny.new
-    amqp_connection.start
-    self.channel = amqp_connection.create_channel
-    self.incoming_queue = self.channel.queue(AmqpConfig.incoming_queue, :durable => true)
-    #This call is just to make sure that this queue exists
-    self.outgoing_queue = self.channel.queue(AmqpConfig.outgoing_queue, :durable => true)
-  end
-
-  def run
-    Kernel.at_exit do
-      self.logger.info 'Stopping server'
-    end
-    Kernel.trap('USR2') do
-      self.halt_before_processing = !self.halt_before_processing
-      self.logger.info "Server will halt before processing next job: #{self.halt_before_processing}"
-      puts "Server will halt before processing next job: #{self.halt_before_processing}"
-    end
-    handle_saved_requests
-    while true do
-      delivery_info, metadata, request = self.incoming_queue.pop
-      if request
-        self.service_incoming_request(request)
-      else
-        sleep 60
-      end
-    end
-  end
-
-  def shutdown
-    self.logger.info "Halting server before processing request."
-    puts "Halting server before processing request."
-    exit 0
-  end
-
-  def handle_saved_requests
-    Dir[File.join(self.request_directory, '*-*')].each do |file|
-      request = File.read(file)
-      uuid = File.basename(file)
-      self.logger.info "Restarting Request: #{uuid}\n#{request}"
-      service_request(request, uuid)
-      self.shutdown if self.halt_before_processing
-    end
-  end
-
-  def service_incoming_request(request)
-    uuid = UUID.generate
-    self.logger.info "Started Request: #{uuid}\n#{request}"
-    #Write request to system
-    FileUtils.mkdir_p(self.request_directory)
-    File.open(File.join(self.request_directory, uuid), 'w') { |f| f.puts request }
-    service_request(request, uuid)
-    self.shutdown if self.halt_before_processing
-  end
-
-  def service_request(request, uuid)
-    response_hash = self.dispatch_and_handle_request(request)
-    #remove request from system
-    FileUtils.rm(File.join(request_directory, uuid))
-    self.outgoing_queue.channel.default_exchange.publish(response_hash.to_json, :routing_key => self.outgoing_queue.name, :persistent => true)
-    self.logger.info "Finished Request: #{uuid}"
-  end
-
-  #deal with the request and return a hash to be used when messaging the client
-  def dispatch_and_handle_request(request)
-    json_request = JSON.parse(request)
-    case json_request['action']
-      when 'upload_directory'
-        handle_upload_directory_request(json_request)
-      else
-        return {:status => 'failure', :error_message => 'Unrecognized Action', :action => json_request['action'],
-                :pass_through => json_request['pass_through']}
-    end
-  rescue JSON::ParserError
-    return {:status => 'failure', :error_message => 'Invalid Request', :pass_through => json_request['pass_through']}
-  rescue Exception => e
-    logger.error "Unknown Error: #{e.to_s}"
-    return {:status => 'failure', :error_message => 'Unknown failure', :pass_through => json_request['pass_through']}
-  end
-
-  def handle_upload_directory_request(json_request)
-    self.logger.info "In handle upload"
-    relative_directory = json_request['parameters']['directory']
+  def handle_upload_directory_request(interaction)
+    self.logger.info "Handling upload"
+    relative_directory = interaction.request_parameter('directory')
     source_directory = File.join(self.cfs_root, relative_directory)
     unless File.directory?(source_directory)
-      return {:status => 'failure', :error_message => 'Upload directory not found', :action => json_request['action'], :pass_through => json_request['pass_through']}
+      return {:status => 'failure', :error_message => 'Upload directory not found', :action => interaction.action,
+              :pass_through => interaction.request_pass_through}
     end
     ingest_id = relative_directory.gsub('/', '-')
     packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
-                            tar_file: File.join(self.bag_root, "#{ingest_id}.tar"), date: json_request['parameters']['date'])
+                            tar_file: File.join(self.bag_root, "#{ingest_id}.tar"), date: interaction.request_parameter('date'))
     packager.make_tar
     #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
     #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
-    encoded_description = Base64.strict_encode64(json_request['parameters']['description'] || '')
+    encoded_description = Base64.strict_encode64(interaction.request_parameter('description') || '')
     archive_id = self.upload_tar(packager, encoded_description)
     FileUtils.mkdir_p(File.join(self.bag_root, 'manifests'))
     FileUtils.copy(File.join(packager.bag_directory, 'manifest-md5.txt'),
                    File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt"))
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
-    return {:status => 'success', :action => json_request['action'], :pass_through => json_request['pass_through'],
-            :parameters => {:archive_ids => [archive_id]}}
+    interaction.succeed(action, archive_ids: [archive_id])
   end
 
   def upload_tar(packager, description)

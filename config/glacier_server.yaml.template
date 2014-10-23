@@ -1,2 +1,23 @@
-cfs_root: /mnt/cnfs/root
-bag_root: /mnt/cnfs/amazon_backup
+#server and amqp stanzas are mandatory for a SimpleAmqpServer
+server:
+  name: my_server_name
+amqp:
+  #queues for communication to and from caller. As expected, receive on incoming_queue and send result on outgoing_queue
+  incoming_queue: medusa_to_glacier
+  outgoing_queue: glacier_to_medusa
+  #Connection information, passed directly to Bunny.new, whose defaults are used for anything missing
+  #Note that Bunny will want these as symbols, so the YAML should reflect that
+  connection:
+    :port: 5672
+#SimpleAmqpServerConfig may be subclassed and additional stanzas added here and used in the subclass for
+#specific configuration that is needed.
+amazon:
+  access_key_id: amazon_access_key_id
+  secret_key: amazon_secret_key
+  glacier_endpoint: https://glacier.us-west-2.amazonaws.com/
+  vault_name: MedusaTestVault
+  sqs_endpoint: sqs.us-west-2.amazonaws.com
+  sns_endpoint: sns.us-west-2.amazonaws.com
+cfs:
+  cfs_root: /mnt/cnfs/root
+  bag_root: /mnt/cnfs/amazon_backup
