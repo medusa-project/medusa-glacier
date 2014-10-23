@@ -1,6 +1,6 @@
 require 'java'
 require 'cattr'
-require_relative 'amazon_jar_requirer'
+require_relative 'amazon_jar_requires'
 
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
@@ -12,11 +12,13 @@ class AmazonConfig
 
   cattr_accessor :aws_credentials, :config, :glacier_client, :sqs_client, :sns_client, :vault_name
 
-  def self.initialize
-    self.config = YAML.load_file('config/amazon.yaml')
-    self.initialize_credentials
-    self.initialize_clients
-    self.vault_name = self.config['vault_name']
+  def self.initialize(config)
+    unless self.config
+      self.config = config
+      self.initialize_credentials
+      self.initialize_clients
+      self.vault_name = self.config['vault_name']
+    end
   end
 
   def self.initialize_credentials
@@ -33,5 +35,3 @@ class AmazonConfig
   end
 
 end
-
-AmazonConfig.initialize

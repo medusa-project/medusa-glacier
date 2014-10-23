@@ -7,7 +7,7 @@ require 'fileutils'
 require 'base64'
 require 'date'
 
-require_relative 'amazon_jar_requirer'
+require_relative 'amazon_jar_requires'
 require_relative 'amazon_config'
 require_relative 'packager'
 require_relative 'simple_amqp_server'
@@ -23,6 +23,7 @@ class MedusaGlacierServer < SimpleAmqpServer
 
   def initialize(args = {})
     super(args)
+    AmazonConfig.initialize(config.amazon)
   end
 
   def cfs_root
