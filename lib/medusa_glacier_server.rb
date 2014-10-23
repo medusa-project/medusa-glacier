@@ -46,23 +46,23 @@ class MedusaGlacierServer < SimpleAmqpServer
     packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
                             tar_file: File.join(self.bag_root, "#{ingest_id}.tar"), date: interaction.request_parameter('date'))
     packager.make_tar
-    #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
-    #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
-    encoded_description = Base64.strict_encode64(interaction.request_parameter('description') || '')
-    archive_id = self.upload_tar(packager, encoded_description)
+    archive_id = self.upload_tar(packager, interaction.request_parameter('description'))
     self.save_manifest(packager.bag_directory, ingest_id)
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
     interaction.succeed(action, archive_ids: [archive_id])
   end
 
-  def upload_tar(packager, description)
+  def upload_tar(packager, description = nil)
+    #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
+    #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
+    encoded_description = Base64.strict_encode64(description || '')
     transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
     self.logger.info "Doing upload"
     self.logger.info "Vault: #{AmazonConfig.vault_name}"
     self.logger.info "Tarball: #{packager.tar_file} Bytes: #{packager.tar_file.size}"
     #It seems that when making the java file object we need to use the full path
-    result = transfer_manager.upload(AmazonConfig.vault_name, description, java.io.File.new(packager.tar_file.to_s))
+    result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description, java.io.File.new(packager.tar_file.to_s))
     self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
     return result.getArchiveId()
   end
