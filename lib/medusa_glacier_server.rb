@@ -53,10 +53,10 @@ class MedusaGlacierServer < SimpleAmqpServer
     interaction.succeed(action, archive_ids: [archive_id])
   end
 
-  def upload_tar(packager, description = nil)
+  def upload_tar(packager, description = '')
     #There are problems if the description has certain characters - it can only have ascii 0x20-0x7f by Amazon specification,
     #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
-    encoded_description = Base64.strict_encode64(description || '')
+    encoded_description = Base64.strict_encode64(description)
     transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
     self.logger.info "Doing upload"
     self.logger.info "Vault: #{AmazonConfig.vault_name}"
