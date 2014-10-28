@@ -1,0 +1,12 @@
+#server and amqp stanzas are mandatory for a SimpleAmqpServer
+server:
+  name: test_server
+  sleep_on_empty: 5
+amqp:
+  #queues for communication to and from caller. As expected, receive on incoming_queue and send result on outgoing_queue
+  incoming_queue: in_to_test
+  outgoing_queue: out_of_test
+  #Connection information, passed directly to Bunny.new, whose defaults are used for anything missing
+  #Note that Bunny will want these as symbols, so the YAML should reflect that
+  connection:
+    :port: 5672

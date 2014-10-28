@@ -49,7 +49,7 @@ class SimpleAmqpServer < Object
   end
 
   def initialize_amqp
-    amqp_connection = Bunny.new(config.amqp.connection || {})
+    amqp_connection = Bunny.new(config.amqp(:connection) || {})
     amqp_connection.start
     self.channel = amqp_connection.create_channel
     self.incoming_queue = self.channel.queue(config.amqp(:incoming_queue), :durable => true)
@@ -70,7 +70,7 @@ class SimpleAmqpServer < Object
       if request
         self.service_incoming_request(request)
       else
-        sleep 60
+        sleep self.sleep_on_empty_time
       end
     end
   end
@@ -83,6 +83,10 @@ class SimpleAmqpServer < Object
   def logger_tee(message)
     logger.info message
     puts message
+  end
+
+  def sleep_on_empty_time
+    config.server(:sleep_on_empty) || 60
   end
 
   def service_saved_requests
@@ -113,7 +117,11 @@ class SimpleAmqpServer < Object
   end
 
   def service_request(interaction)
-    dispatch_and_handle_request(interaction) unless interaction.failed_request_parse?
+    if interaction.failed_request_parse?
+      logger.error "Bad Request: #{interaction.raw_request}"
+    else
+      dispatch_and_handle_request(interaction)
+    end
     unpersist_request(interaction)
     outgoing_queue.channel.default_exchange.publish(interaction.response.to_json, :routing_key => outgoing_queue.name, :persistent => true)
     logger.info "Finished Request: #{interaction.uuid}"

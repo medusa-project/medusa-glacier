@@ -46,7 +46,7 @@ class MedusaGlacierServer < SimpleAmqpServer
     self.save_manifest(packager.bag_directory, ingest_id)
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
-    interaction.succeed(action, archive_ids: [archive_id])
+    interaction.succeed(archive_ids: [archive_id])
   end
 
   def upload_tar(packager, description = nil)

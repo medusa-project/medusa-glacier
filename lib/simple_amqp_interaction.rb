@@ -10,13 +10,9 @@ class SimpleAmqpInteraction < Object
   def initialize(json_request, uuid = nil)
     self.uuid = uuid || UUID.generate
     self.response = SimpleAmqpResponse.new
-    begin
-      self.request = SimpleAmqpRequest.new(json_request)
-      self.response.pass_through = self.request_pass_through
-    rescue JSON::ParserError
-      logger.error "Bad Request: #{interaction.raw_request}"
-      self.fail_request_parse_error(self.raw_request)
-    end
+    self.request = SimpleAmqpRequest.new(json_request)
+    self.response.pass_through = self.request_pass_through || Hash.new
+    self.fail_request_parse_error(self.raw_request) unless self.request.is_valid?
   end
 
   def action
@@ -55,8 +51,12 @@ class SimpleAmqpInteraction < Object
     self.response.invalid_request?
   end
 
-  def succeed(action, parameter_hash)
-    self.response.succeed(action, parameter_hash)
+  def succeed(parameter_hash)
+    self.response.succeed(self.action, parameter_hash)
+  end
+
+  def failed_request_parse?
+    self.response.invalid_request?
   end
 
 end
