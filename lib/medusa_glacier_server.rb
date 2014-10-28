@@ -1,8 +1,4 @@
 require 'java'
-require 'yaml'
-require 'bunny'
-require 'json'
-require 'uuid'
 require 'fileutils'
 require 'base64'
 require 'date'
