@@ -1,10 +1,16 @@
+GIT
+  remote: git@github.com:medusa-project/simple-amqp-server.git
+  revision: bbe6d054dd244d4522750663b8ff9cd1506ee274
+  specs:
+    simple-amqp-server (0.0.3)
+      bunny
+      logging
+      uuid
+
 GEM
   remote: https://rubygems.org/
   specs:
     amq-protocol (1.9.2)
-    amqp (1.4.0)
-      amq-protocol (>= 1.9.2)
-      eventmachine
     bagit (0.3.2)
       docopt (~> 0.5.0)
       validatable (~> 1.6)
@@ -12,7 +18,6 @@ GEM
       amq-protocol (>= 1.9.2)
     cattr (0.1.2)
     docopt (0.5.0)
-    eventmachine (1.0.3-java)
     little-plugger (1.1.3)
     logging (1.8.2)
       little-plugger (>= 1.1.3)
@@ -30,10 +35,7 @@ PLATFORMS
   java
 
 DEPENDENCIES
-  amqp
   bagit
-  bunny
   cattr
-  logging
   os
-  uuid
+  simple-amqp-server!

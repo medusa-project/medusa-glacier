@@ -6,7 +6,7 @@ require 'date'
 require_relative 'amazon_jar_requires'
 require_relative 'amazon_config'
 require_relative 'packager'
-require_relative 'simple_amqp_server'
+require 'simple_amqp_server'
 
 import com.amazonaws.services.glacier.transfer.ArchiveTransferManager
 import com.amazonaws.services.glacier.transfer.UploadResult
@@ -15,7 +15,7 @@ import com.amazonaws.services.glacier.model.ListMultipartUploadsRequest
 import com.amazonaws.services.glacier.model.ListMultipartUploadsResult
 import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
 
-class MedusaGlacierServer < SimpleAmqpServer
+class MedusaGlacierServer < SimpleAmqpServer::Base
 
   def initialize(args = {})
     super(args)

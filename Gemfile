@@ -1,9 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'bunny'
 gem 'cattr'
-gem 'logging'
-gem 'amqp'
-gem 'uuid'
 gem 'bagit'
 gem 'os'
+gem 'simple-amqp-server', git: 'git@github.com:medusa-project/simple-amqp-server.git'
