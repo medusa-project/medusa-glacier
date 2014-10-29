@@ -124,6 +124,7 @@ class SimpleAmqpServer < Object
     end
     unpersist_request(interaction)
     outgoing_queue.channel.default_exchange.publish(interaction.response.to_json, :routing_key => outgoing_queue.name, :persistent => true)
+    logger.info "Returning: #{interaction.response.to_json}"
     logger.info "Finished Request: #{interaction.uuid}"
   end
 
