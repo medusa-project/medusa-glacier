@@ -65,8 +65,8 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
 
   def save_manifest(bag_directory, ingest_id)
     FileUtils.mkdir_p(File.join(self.bag_root, 'manifests'))
-    FileUtils.copy(File.join(bag_directory, 'manifest-md5.txt'),
-                   File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt"))
+    manifest_file =  File.join(bag_directory, 'manifest-md5.txt')
+    FileUtils.copy(manifest_file, File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt")) if File.exists?(manifest_file)
   end
 
   #This isn't directly in the current workflow, It's a convenience for testing, etc.
