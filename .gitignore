@@ -6,3 +6,4 @@ run/
 VaultInventory.java
 VaultInventory.class
 vault_inventory.sh
+vault_info.json
