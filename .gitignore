@@ -3,3 +3,6 @@
 *.iml
 log/
 run/
+VaultInventory.java
+VaultInventory.class
+vault_inventory.sh
