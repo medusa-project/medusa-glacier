@@ -1,8 +1,8 @@
 GIT
   remote: https://github.com/medusa-project/simple-amqp-server.git
-  revision: d0ba7fef631fd9ede90b8ab8deb6fe291c0b2a35
+  revision: 1d567e1a7cd21857f7a0247c265c781d5f9d959b
   specs:
-    simple-amqp-server (1.0.3)
+    simple-amqp-server (1.0.4)
       bunny
       logging
       uuid
