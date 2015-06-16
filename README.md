@@ -14,11 +14,19 @@ For now the service is about as simple as it can be to work for our Medusa appli
 Configuration
 =============
 
-config/amazon.yml contains parameters for interacting with Amazon, including the access key id and secret access
-key.
+All configuration is specified in glacier_server.yaml.
 
-config/amqp.yaml contains parameters for interacting with AMQP, including the queues to use for communication
-in each direction.
+The server stanza must have an (arbitrary) name for the server. It optionally takes a value
+for allow_deletion (by default false). 
+
+The amqp section specifies all information necessary to connect to the amqp server
+as well as the incoming and outgoing queues.
+
+The amazon section specifies the information necessary to connect to Amazon Glacier
+itself.
+
+The cfs section specifies where the content root is (so relative paths start
+here) and where to make the tars for backup.
 
 Running
 =======
@@ -32,7 +40,7 @@ Requests
 
 A request is a JSON object with three fields:
 
-- action: The action being requested. Currently only 'upload_directory' is supported.
+- action: The action being requested. Currently only 'upload_directory' and 'delete_archive' are supported.
 - parameters: Parameters needed for the action.
 - pass_through: A JSON object that the server will pass back to the client with its response. The intended use
  is for the client to be able to know what is being responded to.
@@ -68,3 +76,16 @@ And:
   - archive_ids - these are the archive ids as returned by Amazon Glacier, in a JSON array. Note that at present
 we only handle directories that are small enough to fit into a single amazon upload, about 40TB (a little less in
 practice because of the tar overhead), so this will always have one element only.
+
+delete_archive action:
+
+- Incoming parameters:
+
+  - archive_id - the Amazon Glacier archive id to be deleted
+  
+And:
+
+- Outgoing parameters: 
+
+  None
+
