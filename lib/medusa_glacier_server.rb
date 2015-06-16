@@ -69,6 +69,22 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
     FileUtils.copy(manifest_file, File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt")) if File.exists?(manifest_file)
   end
 
+  def handle_delete_archive_request(interaction)
+    self.logger.info "Handling deletion"
+    unless self.config.server(:allow_deletion)
+      self.logger.info "Deletion not allowed by this server"
+      interaction.fail_generic "Deletion not allowed by this server"
+    end
+    archive_id = interaction.request_parameter('archive_id')
+    unless archive_id
+      self.logger.info "No archive id specified"
+      interaction.fail_generic "No archive id specified"
+    end
+    self.logger.info "Deleting archive: #{archive_id}"
+    delete_archive(archive_id)
+    interaction.succeed(archive_id: archive_id)
+  end
+
   #This isn't directly in the current workflow, It's a convenience for testing, etc.
   def delete_archive(archive_id)
     delete_request = DeleteArchiveRequest.new

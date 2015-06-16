@@ -87,5 +87,5 @@ And:
 
 - Outgoing parameters: 
 
-  None
+  - archive_id - the deleted archive id
 
