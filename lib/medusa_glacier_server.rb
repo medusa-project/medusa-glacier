@@ -74,11 +74,13 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
     unless self.config.server(:allow_deletion)
       self.logger.info "Deletion not allowed by this server"
       interaction.fail_generic "Deletion not allowed by this server"
+      return
     end
     archive_id = interaction.request_parameter('archive_id')
     unless archive_id
       self.logger.info "No archive id specified"
       interaction.fail_generic "No archive id specified"
+      return
     end
     self.logger.info "Deleting archive: #{archive_id}"
     delete_archive(archive_id)
