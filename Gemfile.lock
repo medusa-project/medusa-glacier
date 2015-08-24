@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/medusa-project/simple-amqp-server-jruby.git
-  revision: e98665b4f80f232b15861fe84f6c3c07b6a96181
+  revision: 19649e6c779cc10fdd7a6ddf3001c611b0931482
   specs:
     simple-amqp-server (1.0.10)
       logging
