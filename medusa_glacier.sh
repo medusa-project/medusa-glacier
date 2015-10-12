@@ -14,6 +14,7 @@ case "$1" in
 	    PID=`cat $PID_FILE`
 	    echo "The server appears to be running with pid: $PID"
 	else
+	    export JRUBY_OPTS="$JRUBY_OPTS -J-Xmx1g"
 	    nohup bundle exec ./medusa_glacier.rb run 2>> $ERROR_FILE >> $LOG_FILE < /dev/null &
 	    echo $! > $PID_FILE
 	    echo "Started medusa_glacier.rb with pid: $!"

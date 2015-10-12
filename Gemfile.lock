@@ -1,6 +1,14 @@
 GIT
+  remote: https://github.com/medusa-project/bagit.git
+  revision: 28d3b9273f0c4fa817448d25000051e2d491c404
+  specs:
+    bagit (0.3.2)
+      docopt (~> 0.5.0)
+      validatable (~> 1.6)
+
+GIT
   remote: https://github.com/medusa-project/simple-amqp-server-jruby.git
-  revision: 19649e6c779cc10fdd7a6ddf3001c611b0931482
+  revision: 8a854312bff0c47d34d01b3268624767377ce576
   specs:
     simple-amqp-server (1.0.10)
       logging
@@ -11,18 +19,15 @@ GIT
 GEM
   remote: https://rubygems.org/
   specs:
-    bagit (0.3.2)
-      docopt (~> 0.5.0)
-      validatable (~> 1.6)
     cattr (0.1.2)
     docopt (0.5.0)
-    little-plugger (1.1.3)
+    little-plugger (1.1.4)
     logging (2.0.0)
       little-plugger (~> 1.1)
       multi_json (~> 1.10)
     macaddr (1.7.1)
       systemu (~> 2.6.2)
-    march_hare (2.11.0-java)
+    march_hare (2.13.0-java)
     multi_json (1.11.2)
     os (0.9.6)
     retryable (2.0.2)
@@ -35,7 +40,7 @@ PLATFORMS
   java
 
 DEPENDENCIES
-  bagit
+  bagit!
   cattr
   os
   simple-amqp-server!
