@@ -50,13 +50,13 @@ class Packager < Object
     end
   end
 
-  #Link any files with mtime after the date in the source directory to the
-  #target directory.
+  #Link any files with mtime or ctime after the date in the source
+  #directory to the target directory.
   #Create any directories in source_directory and apply recursively
   def link_modified_files(source_dir, target_dir)
     source_dir.each_child(true) do |child|
       child_target = target_dir.join(child.basename)
-      if child.file? and (child.mtime >= self.time)
+      if child.file? and ((child.mtime >= self.time) or (child.ctime >= self.time))
         child_target.make_symlink(child)
       elsif child.directory?
         child_target.mkpath
