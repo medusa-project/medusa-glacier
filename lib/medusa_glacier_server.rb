@@ -66,7 +66,12 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
   def save_manifest(bag_directory, ingest_id)
     FileUtils.mkdir_p(File.join(self.bag_root, 'manifests'))
     manifest_file =  File.join(bag_directory, 'manifest-md5.txt')
-    FileUtils.copy(manifest_file, File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt")) if File.exists?(manifest_file)
+    manifest_destination = File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt")
+    if File.exists?(manifest_file)
+      FileUtils.copy(manifest_file, manifest_destination)
+    else
+      FileUtils.touch(manifest_destination)
+    end
   end
 
   def handle_delete_archive_request(interaction)
