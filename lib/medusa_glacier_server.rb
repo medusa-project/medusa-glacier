@@ -14,6 +14,7 @@ import com.amazonaws.services.glacier.model.DeleteArchiveRequest
 import com.amazonaws.services.glacier.model.ListMultipartUploadsRequest
 import com.amazonaws.services.glacier.model.ListMultipartUploadsResult
 import com.amazonaws.services.glacier.model.AbortMultipartUploadRequest
+import com.amazonaws.event.ProgressTracker
 
 class MedusaGlacierServer < SimpleAmqpServer::Base
 
@@ -39,14 +40,14 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
       return
     end
     ingest_id = relative_directory.gsub('/', '-')
-    packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
-                            tar_file: File.join(self.bag_root, "#{ingest_id}.tar"), date: interaction.request_parameter('date'))
+    packager = Packager.new(source_directory : source_directory, bag_directory : File.join(self.bag_root, ingest_id),
+        tar_file : File.join(self.bag_root, "#{ingest_id}.tar"), date : interaction.request_parameter('date'))
     packager.make_tar
     archive_id = self.upload_tar(packager, interaction.request_parameter('description'))
     self.save_manifest(packager.bag_directory, ingest_id)
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
-    interaction.succeed(archive_ids: [archive_id])
+    interaction.succeed(archive_ids : [archive_id])
   end
 
   def upload_tar(packager, description = nil)
@@ -54,19 +55,37 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
     #and it seems to have problems with ':' as well using this API, so we deal with it simply by base64 encoding it.
     encoded_description = Base64.strict_encode64(description || '')
     transfer_manager = ArchiveTransferManager.new(AmazonConfig.glacier_client, AmazonConfig.aws_credentials)
-    self.logger.info "Doing upload"
-    self.logger.info "Vault: #{AmazonConfig.vault_name}"
-    self.logger.info "Tarball: #{packager.tar_file} Bytes: #{packager.tar_file.size}"
-    #It seems that when making the java file object we need to use the full path
-    result = transfer_manager.upload("-", AmazonConfig.vault_name, encoded_description,
-                                     java.io.File.new(packager.tar_file.to_s))
-    self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
+    progress_listener = ProgressTracker.new
+    result = nil
+    upload_thread = Thread.new do
+      self.logger.info "Doing upload"
+      self.logger.info "Vault: #{AmazonConfig.vault_name}"
+      self.logger.info "Tarball: #{packager.tar_file} Bytes: #{packager.tar_file.size}"
+      #It seems that when making the java file object we need to use the full path
+      result = transfer_manager.upload("-", AmazonConfig.vault_name, encoded_description,
+                                       java.io.File.new(packager.tar_file.to_s), progress_listener)
+      self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
+    end
+    progress_thread = Thread.new do
+      while true
+        begin
+          sleep 3600
+          progress = progress_listener.get_progress
+          self.logger.info "Response bytes transferred: #{progress.get_response_bytes_transferred}"
+          self.logger.info "Request bytes transferred: #{progress.get_request_bytes_transferred}"
+        rescue Exception => e
+          self.logger.info "Problem tracking progress: #{e}"
+        end
+      end
+    end
+    upload_thread.join
+    progress_thread.kill
     return result.getArchiveId()
   end
 
   def save_manifest(bag_directory, ingest_id)
     FileUtils.mkdir_p(File.join(self.bag_root, 'manifests'))
-    manifest_file =  File.join(bag_directory, 'manifest-md5.txt')
+    manifest_file = File.join(bag_directory, 'manifest-md5.txt')
     manifest_destination = File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt")
     if File.exists?(manifest_file)
       FileUtils.copy(manifest_file, manifest_destination)
@@ -90,7 +109,7 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
     end
     self.logger.info "Deleting archive: #{archive_id}"
     delete_archive(archive_id)
-    interaction.succeed(archive_id: archive_id)
+    interaction.succeed(archive_id : archive_id)
   end
 
   #This isn't directly in the current workflow, It's a convenience for testing, etc.
