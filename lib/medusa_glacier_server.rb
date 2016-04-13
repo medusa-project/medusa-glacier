@@ -40,8 +40,8 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
       return
     end
     ingest_id = relative_directory.gsub('/', '-')
-    packager = Packager.new(source_directory : source_directory, bag_directory : File.join(self.bag_root, ingest_id),
-        tar_file : File.join(self.bag_root, "#{ingest_id}.tar"), date : interaction.request_parameter('date'))
+    packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
+        tar_file: File.join(self.bag_root, "#{ingest_id}.tar"), date: interaction.request_parameter('date'))
     packager.make_tar
     archive_id = self.upload_tar(packager, interaction.request_parameter('description'))
     self.save_manifest(packager.bag_directory, ingest_id)
