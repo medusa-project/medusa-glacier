@@ -40,14 +40,14 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
       return
     end
     ingest_id = relative_directory.gsub('/', '-')
-    packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
-        tar_file: File.join(self.bag_root, "#{ingest_id}.tar"), date: interaction.request_parameter('date'))
+    packager = Packager.new(:source_directory => source_directory, :bag_directory => File.join(self.bag_root, ingest_id),
+        :tar_file => File.join(self.bag_root, "#{ingest_id}.tar"), :date => interaction.request_parameter('date'))
     packager.make_tar
     archive_id = self.upload_tar(packager, interaction.request_parameter('description'))
     self.save_manifest(packager.bag_directory, ingest_id)
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
-    interaction.succeed(archive_ids : [archive_id])
+    interaction.succeed(:archive_ids => [archive_id])
   end
 
   def upload_tar(packager, description = nil)
@@ -109,7 +109,7 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
     end
     self.logger.info "Deleting archive: #{archive_id}"
     delete_archive(archive_id)
-    interaction.succeed(archive_id : archive_id)
+    interaction.succeed(:archive_id => archive_id)
   end
 
   #This isn't directly in the current workflow, It's a convenience for testing, etc.
