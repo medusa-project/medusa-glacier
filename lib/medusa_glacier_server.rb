@@ -58,7 +58,8 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
     self.logger.info "Vault: #{AmazonConfig.vault_name}"
     self.logger.info "Tarball: #{packager.tar_file} Bytes: #{packager.tar_file.size}"
     #It seems that when making the java file object we need to use the full path
-    result = transfer_manager.upload(AmazonConfig.vault_name, encoded_description, java.io.File.new(packager.tar_file.to_s))
+    result = transfer_manager.upload("-", AmazonConfig.vault_name, encoded_description,
+                                     java.io.File.new(packager.tar_file.to_s))
     self.logger.info "Archive uploaded with archive id: #{result.getArchiveId()}"
     return result.getArchiveId()
   end
