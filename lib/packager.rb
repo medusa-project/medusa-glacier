@@ -53,14 +53,32 @@ class Packager < Object
   #Link any files with mtime or ctime after the date in the source
   #directory to the target directory.
   #Create any directories in source_directory and apply recursively
-  def link_modified_files(source_dir, target_dir)
-    source_dir.each_child(true) do |child|
-      child_target = target_dir.join(child.basename)
-      if child.file? and ((child.mtime >= self.time) or (child.ctime >= self.time))
-        child_target.make_symlink(child)
-      elsif child.directory?
-        child_target.mkpath
-        link_modified_files(child, child_target)
+  # def link_modified_files(source_dir, target_dir)
+  #   source_dir.each_child(true) do |child|
+  #     child_target = target_dir.join(child.basename)
+  #     if child.file? and ((child.mtime >= self.time) or (child.ctime >= self.time))
+  #       child_target.make_symlink(child)
+  #     elsif child.directory?
+  #       child_target.mkpath
+  #       link_modified_files(child, child_target)
+  #     end
+  #   end
+  # end
+
+  #an attempt at a non-recursive version of link_modified_files, which for very large
+  #trees may be exhausting the heap
+  def link_modified_files(starting_source_dir, starting_target_dir)
+    queue = [[starting_source_dir, starting_target_dir]]
+    while dirs = queue.pop
+      source_dir, target_dir = dirs
+      source_dir.each_child(true) do |child|
+        child_target = target_dir.join(child.basename)
+        if child.file? and ((child.mtime >= self.time) or (child.ctime >= self.time))
+          child_target.make_symlink(child)
+        elsif child.directory?
+          child_target.mkpath
+          queue.push([child, child_target])
+        end
       end
     end
   end
