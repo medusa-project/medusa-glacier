@@ -69,10 +69,9 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
     progress_thread = Thread.new do
       while true
         begin
-          sleep 3600
+          sleep 1800
           progress = progress_listener.get_progress
-          self.logger.info "Response bytes transferred: #{progress.get_response_bytes_transferred}"
-          self.logger.info "Request bytes transferred: #{progress.get_request_bytes_transferred}"
+          self.logger.info "Request bytes transferred: #{progress.get_request_bytes_transferred} %:#{((100.0 * progress.get_request_bytes_transferred) / packager.tar_file.size).round(2)}"
         rescue Exception => e
           self.logger.info "Problem tracking progress: #{e}"
         end
