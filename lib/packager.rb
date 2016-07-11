@@ -100,6 +100,8 @@ class Packager < Object
     yield
     if self.bagit_executable
       logger.info('Invoking bagit executable to manifest')
+      #IO.popen(self.bagit_executable, bag_directory.to_s)
+      logger.info("With args: #{self.bagit_executable}, #{bag_directory}")
       system(self.bagit_executable, bag_directory.to_s)
     else
       logger.info('Invoking gem bagit manifest')
