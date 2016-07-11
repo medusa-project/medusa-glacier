@@ -8,7 +8,7 @@ require 'os'
 
 class Packager < Object
 
-  attr_accessor :source_directory, :bag_directory, :date, :time, :tar_file
+  attr_accessor :source_directory, :bag_directory, :date, :time, :tar_file, :bagit_executable
 
   def initialize(args = {})
     self.source_directory = Pathname.new(args[:source_directory])
@@ -94,7 +94,11 @@ class Packager < Object
     bag_directory.mkpath
     bag = BagIt::Bag.new(bag_directory)
     yield
-    bag.manifest!
+    if self.bagit_executable
+      system(self.bagit_executable, bag_directory)
+    else
+      bag.manifest!
+    end
     Dir.chdir(bag_directory.dirname) do
       system(tar_command, '--create', '--dereference', '--file', tar_file.to_s, bag_directory.basename.to_s)
     end
