@@ -100,7 +100,7 @@ class Packager < Object
     yield
     if self.bagit_executable
       logger.info('Invoking bagit executable to manifest')
-      system(self.bagit_executable, bag_directory)
+      system(self.bagit_executable, bag_directory.to_s)
     else
       logger.info('Invoking gem bagit manifest')
       bag.manifest!
