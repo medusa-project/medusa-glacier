@@ -15,6 +15,8 @@ class Packager < Object
     self.bag_directory = Pathname.new(args[:bag_directory])
     self.tar_file = Pathname.new(args[:tar_file])
     self.date = self.set_date(args[:date])
+    self.bagit_executable = args[:bagit_executable]
+    self.logger = args[:logger]
   end
 
   def set_date(date_spec)
