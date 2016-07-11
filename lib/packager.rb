@@ -8,7 +8,7 @@ require 'os'
 
 class Packager < Object
 
-  attr_accessor :source_directory, :bag_directory, :date, :time, :tar_file, :bagit_executable
+  attr_accessor :source_directory, :bag_directory, :date, :time, :tar_file, :bagit_executable, :logger
 
   def initialize(args = {})
     self.source_directory = Pathname.new(args[:source_directory])
@@ -90,15 +90,20 @@ class Packager < Object
 
   #Set up bag, run block to populate data, then manifest bag
   def making_bag_and_tar_with_data
+    logger.info('Removing old bag and tar if present')
     remove_bag_and_tar
+    logger.info('Making new bag')
     bag_directory.mkpath
     bag = BagIt::Bag.new(bag_directory)
     yield
     if self.bagit_executable
+      logger.info('Invoking bagit executable to manifest')
       system(self.bagit_executable, bag_directory)
     else
+      logger.info('Invoking gem bagit manifest')
       bag.manifest!
     end
+    logger.info('Tarring bag')
     Dir.chdir(bag_directory.dirname) do
       system(tar_command, '--create', '--dereference', '--file', tar_file.to_s, bag_directory.basename.to_s)
     end
