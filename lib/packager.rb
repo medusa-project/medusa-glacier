@@ -100,9 +100,10 @@ class Packager < Object
     yield
     if self.bagit_executable
       logger.info('Invoking bagit executable to manifest')
+      command = %Q(#{self.bagit_executable} #{self.bag_directory})
       #IO.popen(self.bagit_executable, bag_directory.to_s)
-      logger.info("With args: #{self.bagit_executable}, #{bag_directory}")
-      if system(self.bagit_executable, bag_directory.to_s)
+      logger.info("With command: #{command}")
+      if system(command)
         logger.info("Manifest succeeded: #{$?}")
       else
         logger.info("Manifest failed: #{$?}")
