@@ -22,9 +22,3 @@ amazon:
 cfs:
   cfs_root: /mnt/cnfs/root
   bag_root: /mnt/cnfs/amazon_backup
-bagit:
-  #If set will call the executable given with the bag directory as the sole argument to manifest instead of trying to
-  #use the internal BagIt gem to do so. This is because of some problems we've had with memory exhaustion that
-  #don't seem to affect the MRI bagit executable. Note that probably this should point to a script that then invokes
-  #bagit as desired.
-  executable: /path/to/bagit/script

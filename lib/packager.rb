@@ -8,7 +8,7 @@ require 'os'
 
 class Packager < Object
 
-  attr_accessor :source_directory, :bag_directory, :date, :time, :tar_file, :bagit_executable, :logger
+  attr_accessor :source_directory, :bag_directory, :date, :time, :tar_file, :logger
 
   def initialize(args = {})
     self.source_directory = Pathname.new(args[:source_directory])
@@ -98,25 +98,20 @@ class Packager < Object
     bag_directory.mkpath
     bag = BagIt::Bag.new(bag_directory)
     yield
-    if self.bagit_executable
-      logger.info('Invoking bagit executable to manifest')
-      command = %Q(#{self.bagit_executable} #{self.bag_directory})
-      #IO.popen(self.bagit_executable, bag_directory.to_s)
-      logger.info("With command: #{command}")
-      if system(command)
-        logger.info("Manifest succeeded: #{$?}")
-      else
-        logger.info("Manifest failed: #{$?}")
-      end
-    else
-      logger.info('Invoking gem bagit manifest')
-      bag.manifest!
-    end
+    logger.info('Invoking gem bagit manifest')
+    bag.manifest!
     logger.info('Tarring bag')
     Dir.chdir(bag_directory.dirname) do
       system(tar_command, '--create', '--dereference', '--file', tar_file.to_s, bag_directory.basename.to_s)
     end
   end
+
+  #alternate method of making the manifest:
+  #cd to bag directory
+  #(g)find data -type f -exec md5sum {} \; > manifest-md5.txt
+  #then bag.tagmanifest!
+  #Will this work any better under system?
+  #Do need to make sure that links are followed!
 
   def bag_data_directory
     Pathname.new(File.join(bag_directory, 'data'))
