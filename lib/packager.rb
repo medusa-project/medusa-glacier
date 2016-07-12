@@ -101,7 +101,8 @@ class Packager < Object
     #bag.manifest!
     Dir.chdir(bag_directory) do
       logger.info('Creating manifest with find')
-      system(find_command, '-L', 'data', '-type', 'f', '-exec', 'md5sum', '{}', ';', '>', 'manifest-md5.txt')
+      system("#{find_command} -L data -type f -exec md5sum {} \; > manifest-md5.txt")
+      #system(find_command, '-L', 'data', '-type', 'f', '-exec', 'md5sum', '{}', ';', '>', 'manifest-md5.txt')
     end
     bag.tagmanifest!
     logger.info('Tarring bag')
