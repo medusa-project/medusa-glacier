@@ -97,12 +97,9 @@ class Packager < Object
     bag_directory.mkpath
     bag = BagIt::Bag.new(bag_directory)
     yield
-    #logger.info('Invoking gem bagit manifest')
-    #bag.manifest!
     Dir.chdir(bag_directory) do
       logger.info('Creating manifest with find')
       system("#{find_command} -L data -type f -exec md5sum {} + > manifest-md5.txt")
-      #system(find_command, '-L', 'data', '-type', 'f', '-exec', 'md5sum', '{}', ';', '>', 'manifest-md5.txt')
     end
     bag.tagmanifest!
     logger.info('Tarring bag')
@@ -110,13 +107,7 @@ class Packager < Object
       system(tar_command, '--create', '--dereference', '--file', tar_file.to_s, bag_directory.basename.to_s)
     end
   end
-
-  #alternate method of making the manifest:
-  #cd to bag directory
-  #(g)find -L data -type f -exec md5sum {} \; > manifest-md5.txt
-  #then bag.tagmanifest!
-  #Will this work any better under system?
-
+  
   def bag_data_directory
     Pathname.new(File.join(bag_directory, 'data'))
   end
