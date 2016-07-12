@@ -98,8 +98,13 @@ class Packager < Object
     bag_directory.mkpath
     bag = BagIt::Bag.new(bag_directory)
     yield
-    logger.info('Invoking gem bagit manifest')
-    bag.manifest!
+    #logger.info('Invoking gem bagit manifest')
+    #bag.manifest!
+    Dir.chdir(bag_directory) do
+      logger.info('Creating manifest with find')
+      system(find_command, '-L', 'data', '-type', 'f', '-exec', 'md5sum', '{}', ';', '>', 'manifest-md5.txt')
+    end
+    bag.tagmanifest!
     logger.info('Tarring bag')
     Dir.chdir(bag_directory.dirname) do
       system(tar_command, '--create', '--dereference', '--file', tar_file.to_s, bag_directory.basename.to_s)
@@ -108,10 +113,9 @@ class Packager < Object
 
   #alternate method of making the manifest:
   #cd to bag directory
-  #(g)find data -type f -exec md5sum {} \; > manifest-md5.txt
+  #(g)find -L data -type f -exec md5sum {} \; > manifest-md5.txt
   #then bag.tagmanifest!
   #Will this work any better under system?
-  #Do need to make sure that links are followed!
 
   def bag_data_directory
     Pathname.new(File.join(bag_directory, 'data'))
@@ -123,6 +127,16 @@ class Packager < Object
     elsif OS.mac?
       #for darwin use homebrew (or other) GNU tar instead of BSD tar
       'gtar'
+    else
+      raise RuntimeError, 'Unrecognized platform'
+    end
+  end
+
+  def find_command
+    if OS.linux?
+      'find'
+    elsif OS.mac?
+      'gfind'
     else
       raise RuntimeError, 'Unrecognized platform'
     end
