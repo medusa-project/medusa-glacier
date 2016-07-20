@@ -99,7 +99,11 @@ class Packager < Object
     yield
     Dir.chdir(bag_directory) do
       logger.info('Creating manifest with find')
-      system("#{find_command} -L data -type f -exec md5sum {} + > manifest-md5.txt")
+      if system("#{find_command} -L data -type f -exec md5sum {} + > manifest-md5.txt")
+        logger.info 'Manifest created'
+      else
+        logger.info 'Error creating manifest'
+      end
     end
     logger.info('Tarring bag')
     Dir.chdir(bag_directory.dirname) do
