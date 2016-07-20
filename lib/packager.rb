@@ -101,13 +101,12 @@ class Packager < Object
       logger.info('Creating manifest with find')
       system("#{find_command} -L data -type f -exec md5sum {} + > manifest-md5.txt")
     end
-    bag.tagmanifest!
     logger.info('Tarring bag')
     Dir.chdir(bag_directory.dirname) do
       system(tar_command, '--create', '--dereference', '--file', tar_file.to_s, bag_directory.basename.to_s)
     end
   end
-  
+
   def bag_data_directory
     Pathname.new(File.join(bag_directory, 'data'))
   end
