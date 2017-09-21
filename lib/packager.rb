@@ -106,21 +106,21 @@ class Packager < Object
             db.put(path, md5sum)
           end
         end
-      end
-      File.open(File.join(bag_directory, MANIFEST_FILE), 'wb') do |manifest|
-        File.open(File.join(bag_directory, INITIAL_MANIFEST_FILE)) do |initial_manifest|
-          initial_manifest.each_line do |line|
-            line.chomp!
-            md5sum, path = line.split(/\s+/, 2)
-            if db.get(path) == md5sum
-              delete_path = Pathname.new(File.join(bag_directory, path))
-              delete_path.delete
-              while delete_path = delete_path.parent
-                break unless delete_path.children.empty?
+        File.open(File.join(bag_directory, MANIFEST_FILE), 'wb') do |manifest|
+          File.open(File.join(bag_directory, INITIAL_MANIFEST_FILE)) do |initial_manifest|
+            initial_manifest.each_line do |line|
+              line.chomp!
+              md5sum, path = line.split(/\s+/, 2)
+              if db.get(path) == md5sum
+                delete_path = Pathname.new(File.join(bag_directory, path))
                 delete_path.delete
+                while delete_path = delete_path.parent
+                  break unless delete_path.children.empty?
+                  delete_path.delete
+                end
+              else
+                manifest.puts(line)
               end
-            else
-              manifest.puts(line)
             end
           end
         end
