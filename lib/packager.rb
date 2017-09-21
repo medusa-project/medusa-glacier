@@ -107,8 +107,8 @@ class Packager < Object
           end
         end
       end
-      File.open(MANIFEST_FILE, 'wb') do |manifest|
-        File.open(INITIAL_MANIFEST_FILE) do |initial_manifest|
+      File.open(File.join(bag_directory, MANIFEST_FILE), 'wb') do |manifest|
+        File.open(File.join(bag_directory, INITIAL_MANIFEST_FILE)) do |initial_manifest|
           initial_manifest.each_line do |line|
             line.chomp!
             md5sum, path = line.split(/\s+/, 2)
