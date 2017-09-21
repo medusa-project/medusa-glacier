@@ -40,15 +40,15 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
       return
     end
     ingest_id = relative_directory.gsub('/', '-')
-    packager = Packager.new(:source_directory => source_directory, :bag_directory => File.join(self.bag_root, ingest_id),
-                            :tar_file => File.join(self.bag_root, "#{ingest_id}.tar"), :date => interaction.request_parameter('date'),
-                            :logger => self.logger)
+    packager = Packager.new(source_directory: source_directory, bag_directory: File.join(self.bag_root, ingest_id),
+                            tar_file: File.join(self.bag_root, "#{ingest_id}.tar"), date: interaction.request_parameter('date'),
+                            logger: self.logger, old_manifests: old_manifests(ingest_id))
     packager.make_tar
     archive_id = self.upload_tar(packager, interaction.request_parameter('description'))
     self.save_manifest(packager.bag_directory, ingest_id)
     self.logger.info "Removing tar and bag directory"
     packager.remove_bag_and_tar
-    interaction.succeed(:archive_ids => [archive_id])
+    interaction.succeed(archive_ids: [archive_id])
   end
 
   def upload_tar(packager, description = nil)
@@ -85,14 +85,18 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
   end
 
   def save_manifest(bag_directory, ingest_id)
-    FileUtils.mkdir_p(File.join(self.bag_root, 'manifests'))
+    FileUtils.mkdir_p(manifests_path)
     manifest_file = File.join(bag_directory, 'manifest-md5.txt')
-    manifest_destination = File.join(self.bag_root, 'manifests', "#{ingest_id}-#{Date.today}.md5.txt")
+    manifest_destination = File.join(manifests_path, "#{ingest_id}-#{Date.today}.md5.txt")
     if File.exists?(manifest_file)
       FileUtils.copy(manifest_file, manifest_destination)
     else
       FileUtils.touch(manifest_destination)
     end
+  end
+
+  def manifests_path
+    File.join(self.bag_root, 'manifests')
   end
 
   def handle_delete_archive_request(interaction)
@@ -119,6 +123,10 @@ class MedusaGlacierServer < SimpleAmqpServer::Base
     delete_request.with_vault_name(AmazonConfig.vault_name)
     delete_request.with_archive_id(archive_id)
     AmazonConfig.glacier_client.delete_archive(delete_request)
+  end
+
+  def old_manifests(ingest_id)
+    Dir[File.join(manifests_path, "#{ingest_id}-*")]
   end
 
 end

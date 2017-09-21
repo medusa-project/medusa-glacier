@@ -21,6 +21,9 @@ GEM
   specs:
     cattr (0.1.2)
     docopt (0.5.0)
+    leveldb-jruby (1.1.0-java)
+      leveldbjni-jars (~> 1.8.0)
+    leveldbjni-jars (1.8.0-java)
     little-plugger (1.1.4)
     logging (2.2.2)
       little-plugger (~> 1.1)
@@ -42,8 +45,9 @@ PLATFORMS
 DEPENDENCIES
   bagit!
   cattr
+  leveldb-jruby
   os
   simple-amqp-server!
 
 BUNDLED WITH
-   1.12.5
+   1.15.4
