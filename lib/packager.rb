@@ -20,7 +20,7 @@ class Packager < Object
     self.tar_file = Pathname.new(args[:tar_file])
     self.date = self.set_date(args[:date])
     self.logger = args[:logger]
-    self.ingest_id = args[:ingest_id]
+    self.old_manifests = args[:old_manifests]
   end
 
   def set_date(date_spec)
