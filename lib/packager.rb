@@ -5,6 +5,7 @@ require 'date'
 require 'pathname'
 require 'bagit'
 require 'os'
+require 'leveldb'
 
 class Packager < Object
 
