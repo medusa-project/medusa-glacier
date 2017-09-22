@@ -68,7 +68,7 @@ class Packager < Object
       end
     end
     trim_manifest_and_data
-    FileUtils.rm(INITIAL_MANIFEST_FILE)
+    FileUtils.rm(File.join(bag_directory, INITIAL_MANIFEST_FILE))
     logger.info('Tarring bag')
     Dir.chdir(bag_directory.dirname) do
       system(tar_command, '--create', '--dereference', '--file', tar_file.to_s, bag_directory.basename.to_s)
@@ -96,7 +96,9 @@ class Packager < Object
 
   def trim_manifest_and_data
     if old_manifests.empty?
-      FileUtils.cp(INITIAL_MANIFEST_FILE, MANIFEST_FILE)
+      Dir.chdir(bag_directory) do
+        FileUtils.cp(INITIAL_MANIFEST_FILE, MANIFEST_FILE)
+      end
     else
       logger.info "Trimming manifest - #{old_manifests.count} old manifests found"
       with_manifest_db do |db|
