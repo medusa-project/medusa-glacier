@@ -123,7 +123,7 @@ class Packager < Object
           end
         end
         #prune the data directory
-        system(find_command, bag_data_directory, '-type', 'd', '-empty', '-delete')
+        system(find_command, bag_data_directory.to_s, '-type', 'd', '-empty', '-delete')
       end
     end
   end
