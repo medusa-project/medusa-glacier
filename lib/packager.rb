@@ -98,6 +98,7 @@ class Packager < Object
     if old_manifests.empty?
       FileUtils.cp(INITIAL_MANIFEST_FILE, MANIFEST_FILE)
     else
+      logger.info "Trimming manifest - #{old_manifests.count} old manifests found"
       with_manifest_db do |db|
         old_manifests.sort.each do |manifest|
           File.open(manifest).each_line do |line|
@@ -106,24 +107,23 @@ class Packager < Object
             db.put(path, md5sum)
           end
         end
+        logger.info "Parsed old manifests - writing new manifest"
+        #TODO just remove the files and then use find to trim empty directories at then end
         File.open(File.join(bag_directory, MANIFEST_FILE), 'wb') do |manifest|
           File.open(File.join(bag_directory, INITIAL_MANIFEST_FILE)) do |initial_manifest|
             initial_manifest.each_line do |line|
               line.chomp!
               md5sum, path = line.split(/\s+/, 2)
               if db.get(path) == md5sum
-                delete_path = Pathname.new(File.join(bag_directory, path))
-                delete_path.delete
-                while delete_path = delete_path.parent
-                  break unless delete_path.children.empty?
-                  delete_path.delete
-                end
+                FileUtils.rm(File.join(bag_directory, path))
               else
                 manifest.puts(line)
               end
             end
           end
         end
+        #prune the data directory
+        system(find_command, bag_data_directory, '-type', 'd', '-empty', '-delete')
       end
     end
   end
