@@ -183,6 +183,7 @@ class Packager < Object
   end
 
   def with_manifest_db
+    FileUtils.rm_rf(MANIFEST_DB_DIR) if Dir.exist?(MANIFEST_DB_DIR)
     db = LevelDb.open(MANIFEST_DB_DIR)
     yield db
     db.close
