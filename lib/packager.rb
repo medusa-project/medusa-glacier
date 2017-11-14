@@ -102,7 +102,7 @@ class Packager < Object
       end
     else
       logger.info "Trimming manifest - #{old_manifests.count} old manifests found"
-      with_manifest_db(SecureRandom.hex(8)) do |db|
+      with_manifest_db do |db|
         old_manifests.sort.each do |manifest|
           File.open(manifest).each_line do |line|
             line.chomp!
@@ -183,15 +183,20 @@ class Packager < Object
     end
   end
 
-  def with_manifest_db(subdirectory_name)
+  def with_manifest_db(subdirectory_name = nil)
+    subdirectory_name ||= SecureRandom.hex(8)
     directory = File.join(MANIFEST_DB_DIR, subdirectory_name)
     logger.info("Using #{directory} for manifest database")
     FileUtils.rm_rf(directory) if Dir.exist?(directory)
     FileUtils.mkdir_p(MANIFEST_DB_DIR)
     db = LevelDb.open(directory)
     yield db
-    db.close
   ensure
+    begin
+      db.close if db
+    rescue Exception
+      logger.error "Problem closing LevelDB for #{directory}"
+    end
     FileUtils.rm_rf(directory) if Dir.exist?(directory)
   end
 
