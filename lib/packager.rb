@@ -6,6 +6,7 @@ require 'pathname'
 require 'bagit'
 require 'os'
 require 'leveldb'
+require 'securerandom'
 
 class Packager < Object
 
@@ -101,7 +102,7 @@ class Packager < Object
       end
     else
       logger.info "Trimming manifest - #{old_manifests.count} old manifests found"
-      with_manifest_db do |db|
+      with_manifest_db(SecureRandom.hex(8)) do |db|
         old_manifests.sort.each do |manifest|
           File.open(manifest).each_line do |line|
             line.chomp!
@@ -182,13 +183,16 @@ class Packager < Object
     end
   end
 
-  def with_manifest_db
-    FileUtils.rm_rf(MANIFEST_DB_DIR) if Dir.exist?(MANIFEST_DB_DIR)
-    db = LevelDb.open(MANIFEST_DB_DIR)
+  def with_manifest_db(subdirectory_name)
+    directory = File.join(MANIFEST_DB_DIR, subdirectory_name)
+    logger.info("Using #{directory} for manifest database")
+    FileUtils.rm_rf(directory) if Dir.exist?(directory)
+    FileUtils.mkdir_p(MANIFEST_DB_DIR)
+    db = LevelDb.open(directory)
     yield db
     db.close
   ensure
-    FileUtils.rm_rf(MANIFEST_DB_DIR) if Dir.exist?(MANIFEST_DB_DIR)
+    FileUtils.rm_rf(directory) if Dir.exist?(directory)
   end
 
 end
